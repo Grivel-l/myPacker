@@ -6,7 +6,7 @@ static int  getHeader(int fd, const char *path, s_header *header) {
     if (stat(path, &stats) == -1)
         return (-1);
     header->size = stats.st_size;
-    if ((header->header = mmap(NULL, stats.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+    if ((header->header = mmap(NULL, stats.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
         return (-1);
     return (0);
 }
@@ -37,6 +37,29 @@ static void *getSectionHeader(Elf64_Ehdr *header, const char *section) {
     return (NULL);
 }
 
+int writeToFile(s_header header) {
+    int     fd;
+
+    if ((fd = open("./packed", O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH | S_IROTH)) == -1)
+        return (-1);
+    if (write(fd, header.header, header.size) == -1)
+        return (-1);
+    close(fd);
+    return (0);
+}
+
+static void obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section) {
+    size_t  i;
+    char    *tmp;
+
+    i = 0;
+    while (i < section->sh_size) {
+        tmp = ((void *)header + section->sh_offset + i);
+        *tmp ^= 0xa5;
+        i += 1;
+    }
+}
+
 int main(int argc, char **argv) {
     int         fd;
     s_header    header;
@@ -62,7 +85,11 @@ int main(int argc, char **argv) {
         dprintf(2, "No text section in file\n");
         return (1);
     }
-    (void)section;
+    obfuscateSection(header.header, section);
+    if (writeToFile(header) == -1) {
+        dprintf(1, "%s\n", strerror(errno));
+        return (1);
+    }
     return (0);
 }
 
