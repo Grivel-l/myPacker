@@ -60,6 +60,47 @@ static void obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section) {
     }
 }
 
+/* static Elf64_Shdr   createEP(s_header header) { */
+/*     Elf64_Shdr  ep; */
+
+/*     ep.sh_type = SHT_PROGBITS; */
+/*     ep.sh_flags = SHF_EXECINSTR | SHF_ALLOC; */
+/*     /1* ep.sh_addr *1/ */
+/*     /1* ep.sh_offset *1/ */
+/*     /1* ep.sh_size *1/ */
+/*     ep.sh_link = 0; */
+/*     ep.sh_info = 0; */
+/*     ep.sh_addralign = 0; */
+/*     ep.sh_entsize = 0; */
+/*     return (ep); */
+/* } */
+
+static int  getPackContent(s_header *header) {
+    char        *bin;
+    size_t      tableSize;
+    Elf64_Ehdr  *binHeader;
+    Elf64_Shdr  *secHeader;
+    Elf64_Shdr  *cpy;
+
+    if ((cpy = getSectionHeader(header->header, ".text")) == NULL) {
+        return (-1);
+    }
+    tableSize = sizeof(Elf64_Shdr);
+    binHeader = header->header;
+    if ((bin = mmap(NULL, header->size + tableSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+        return (-1);
+    secHeader = (void *)binHeader + binHeader->e_shoff + binHeader->e_shentsize * binHeader->e_shnum;
+    memcpy(bin, binHeader, ((void *)secHeader) - ((void *)binHeader));
+    memcpy(bin + (((void *)secHeader) - ((void *)binHeader)), cpy, sizeof(Elf64_Shdr));
+    memcpy(bin + (((void *)secHeader) - ((void *)binHeader)) + sizeof(Elf64_Shdr), secHeader, header->size - (((void *)secHeader) - ((void *)binHeader)));
+    header->header = (Elf64_Ehdr *)bin;
+    header->size += tableSize;
+    if (binHeader->e_phoff > binHeader->e_shoff)
+        binHeader->e_phoff += tableSize;
+    binHeader->e_shnum += 1;
+    return (0);
+}
+
 int main(int argc, char **argv) {
     int         fd;
     s_header    header;
@@ -85,7 +126,13 @@ int main(int argc, char **argv) {
         dprintf(2, "No text section in file\n");
         return (1);
     }
-    obfuscateSection(header.header, section);
+    /* obfuscateSection(header.header, section); */
+    (void)obfuscateSection;
+    /* createEP(header); */
+    errno = 0;
+    if (getPackContent(&header) == -1) {
+        dprintf(2, "Error occured during getting %s\n", strerror(errno));
+    }
     if (writeToFile(header) == -1) {
         dprintf(1, "%s\n", strerror(errno));
         return (1);
