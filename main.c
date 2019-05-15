@@ -75,7 +75,7 @@ static void obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section) {
 /*     return (ep); */
 /* } */
 
-static int  getPackContent(s_header *header) {
+static int  addSection(s_header *header) {
     char        *bin;
     size_t      tableSize;
     Elf64_Ehdr  *binHeader;
@@ -130,13 +130,14 @@ int main(int argc, char **argv) {
     (void)obfuscateSection;
     /* createEP(header); */
     errno = 0;
-    if (getPackContent(&header) == -1) {
+    if (addSection(&header) == -1) {
         dprintf(2, "Error occured during getting %s\n", strerror(errno));
     }
     if (writeToFile(header) == -1) {
         dprintf(1, "%s\n", strerror(errno));
         return (1);
     }
+    munmap(header.header, header.size);
     return (0);
 }
 
