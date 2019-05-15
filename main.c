@@ -1,13 +1,22 @@
 #include "packer.h"
 
-static int  getHeader(int fd, const char *path, s_header *header) {
+static int  getHeader(int fd, const char *path, t_header *header) {
+    size_t      opened;
     struct stat stats;
 
     if (stat(path, &stats) == -1)
         return (-1);
     header->size = stats.st_size;
+    opened = 0;
+    if (fd == -1) {
+        if ((fd = open(path, O_RDONLY)) == -1)
+            return (-1);
+        opened = 1;
+    }
     if ((header->header = mmap(NULL, stats.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
         return (-1);
+    if (opened)
+        close(fd);
     return (0);
 }
 
@@ -37,7 +46,7 @@ static void *getSectionHeader(Elf64_Ehdr *header, const char *section) {
     return (NULL);
 }
 
-int writeToFile(s_header header) {
+int writeToFile(t_header header) {
     int     fd;
 
     if ((fd = open("./packed", O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH | S_IROTH)) == -1)
@@ -60,7 +69,7 @@ static void obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section) {
     }
 }
 
-/* static Elf64_Shdr   createEP(s_header header) { */
+/* static Elf64_Shdr   createEP(t_header header) { */
 /*     Elf64_Shdr  ep; */
 
 /*     ep.sh_type = SHT_PROGBITS; */
@@ -75,35 +84,48 @@ static void obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section) {
 /*     return (ep); */
 /* } */
 
-static int  addSection(s_header *header) {
+static int  addSection(t_header *header) {
     char        *bin;
     size_t      tableSize;
     Elf64_Ehdr  *binHeader;
     Elf64_Shdr  *secHeader;
     Elf64_Shdr  *cpy;
+    t_header    shellcode;
+    Elf64_Half  secSize;
+    Elf64_Off   secOff;
 
     if ((cpy = getSectionHeader(header->header, ".text")) == NULL) {
         return (-1);
     }
+    if (getHeader(-1, "./yo", &shellcode) == -1)
+        return (-1);
     tableSize = sizeof(Elf64_Shdr);
     binHeader = header->header;
-    if ((bin = mmap(NULL, header->size + tableSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+    cpy->sh_size = shellcode.size;
+    cpy->sh_offset = header->size + tableSize;
+    secSize = cpy->sh_size;
+    secOff = cpy->sh_offset;
+    if ((bin = mmap(NULL, header->size + tableSize + cpy->sh_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     secHeader = (void *)binHeader + binHeader->e_shoff + binHeader->e_shentsize * binHeader->e_shnum;
     memcpy(bin, binHeader, ((void *)secHeader) - ((void *)binHeader));
     memcpy(bin + (((void *)secHeader) - ((void *)binHeader)), cpy, sizeof(Elf64_Shdr));
     memcpy(bin + (((void *)secHeader) - ((void *)binHeader)) + sizeof(Elf64_Shdr), secHeader, header->size - (((void *)secHeader) - ((void *)binHeader)));
+    memcpy(bin + header->size + tableSize, shellcode.header, shellcode.size);
+    munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
-    header->size += tableSize;
+    binHeader = header->header;
+    header->size += tableSize + secSize;
     if (binHeader->e_phoff > binHeader->e_shoff)
         binHeader->e_phoff += tableSize;
     binHeader->e_shnum += 1;
+    binHeader->e_entry = (Elf64_Addr)(bin + secOff + shellcode.header->e_entry);
     return (0);
 }
 
 int main(int argc, char **argv) {
     int         fd;
-    s_header    header;
+    t_header    header;
     Elf64_Shdr  *section;
 
     if (argc != 2) {

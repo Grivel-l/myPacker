@@ -10,9 +10,9 @@
 #include <string.h>
 #include <elf.h>
 
-typedef struct  t_header {
+typedef struct  s_header {
     size_t      size;
     Elf64_Ehdr  *header;
-}               s_header;
+}               t_header;
 
 #endif
