@@ -46,6 +46,23 @@ static void *getSectionHeader(Elf64_Ehdr *header, const char *section) {
     return (NULL);
 }
 
+static void *getSegmentHeader(Elf64_Ehdr *header, Elf64_Word type) {
+    Elf64_Half  i;
+    Elf64_Phdr  *last;
+    Elf64_Phdr  *segHeader;
+
+    last = NULL;
+    segHeader = ((void *)header) + header->e_phoff;
+    i = 0;
+    while (i < header->e_phnum) {
+        if (type == (segHeader + i)->p_type) {
+            last = segHeader + i;
+        }
+        i += 1;
+    }
+    return (last);
+}
+
 int writeToFile(t_header header) {
     int     fd;
 
@@ -86,40 +103,68 @@ static void obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section) {
 
 static int  addSection(t_header *header) {
     char        *bin;
-    size_t      tableSize;
-    Elf64_Ehdr  *binHeader;
-    Elf64_Shdr  *secHeader;
     Elf64_Shdr  *cpy;
+    Elf64_Shdr  *tmp;
     t_header    shellcode;
-    Elf64_Half  secSize;
-    Elf64_Off   secOff;
+    size_t      offset;
 
+    if (getHeader(-1, "./yo", &shellcode) == -1)
+        return (-1);
     if ((cpy = getSectionHeader(header->header, ".text")) == NULL) {
         return (-1);
     }
-    if (getHeader(-1, "./yo", &shellcode) == -1)
+    if ((tmp = getSectionHeader(shellcode.header, ".text")) == NULL) {
         return (-1);
-    tableSize = sizeof(Elf64_Shdr);
-    binHeader = header->header;
-    cpy->sh_size = shellcode.size;
-    cpy->sh_offset = header->size + tableSize;
-    secSize = cpy->sh_size;
-    secOff = cpy->sh_offset;
-    if ((bin = mmap(NULL, header->size + tableSize + cpy->sh_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+    }
+    if ((bin = mmap(NULL, header->size + shellcode.size + sizeof(Elf64_Shdr), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
-    secHeader = (void *)binHeader + binHeader->e_shoff + binHeader->e_shentsize * binHeader->e_shnum;
-    memcpy(bin, binHeader, ((void *)secHeader) - ((void *)binHeader));
-    memcpy(bin + (((void *)secHeader) - ((void *)binHeader)), cpy, sizeof(Elf64_Shdr));
-    memcpy(bin + (((void *)secHeader) - ((void *)binHeader)) + sizeof(Elf64_Shdr), secHeader, header->size - (((void *)secHeader) - ((void *)binHeader)));
-    memcpy(bin + header->size + tableSize, shellcode.header, shellcode.size);
+    (void)tmp;
+    /* tmp->sh_size = cpy->sh_size; */
+    /* tmp->sh_name = cpy->sh_name; */
+    /* cpy->sh_offset = offset; */
+    /* cpy->sh_addr = (Elf64_Addr)(bin + offset); */
+    /* tmp = cpy->sh_addr; */
+    offset = 0;
+    header->header->e_shstrndx += 1;
+    header->header->e_shnum += 1;
+    memcpy(bin, header->header, header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr));
+    offset += header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr);
+    /* memcpy(bin + offset, cpy, sizeof(Elf64_Shdr)); */
+    /* (void)cpy; */
+    memset(bin + offset, 0xcc, sizeof(Elf64_Shdr));
+    offset += sizeof(Elf64_Shdr);
+    memcpy(bin + offset, (void *)header->header + header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr), (header->header->e_shnum - 1) * sizeof(Elf64_Shdr));
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
-    binHeader = header->header;
-    header->size += tableSize + secSize;
-    if (binHeader->e_phoff > binHeader->e_shoff)
-        binHeader->e_phoff += tableSize;
-    binHeader->e_shnum += 1;
-    binHeader->e_entry = (Elf64_Addr)(bin + secOff + shellcode.header->e_entry);
+    header->size += sizeof(Elf64_Shdr);
+    (void)getSegmentHeader;
+
+    /* offset += sizeof(Elf64_Shdr); */
+    /* memcpy(bin + offset, ((void *)(header->header)) + header->header->e_shoff, (header->header->e_shnum - 1) * sizeof(Elf64_Shdr)); */
+    /* header->header->e_entry = tmp; */
+    /* (void)getSegmentHeader; */
+    
+    /* Elf64_Phdr *tmp = getSegmentHeader(shellcode.header, PT_LOAD); */
+    /* tableSize = sizeof(Elf64_Shdr); */
+    /* binHeader = header->header; */
+    /* cpy->sh_size = shellcode.size; */
+    /* cpy->sh_offset = header->size + tableSize; */
+    /* secSize = cpy->sh_size; */
+    /* secHeader = (void *)binHeader + binHeader->e_shoff + binHeader->e_shentsize * binHeader->e_shnum; */
+    /* cpy->sh_addr = (Elf64_Addr)(bin + header->size + tableSize); */
+    /* memcpy(bin, binHeader, ((void *)secHeader) - ((void *)binHeader)); */
+    /* memcpy(bin + (((void *)secHeader) - ((void *)binHeader)), cpy, sizeof(Elf64_Shdr)); */
+    /* header->size += sizeof(Elf64_Shdr); */
+    /* memcpy(bin + (((void *)secHeader) - ((void *)binHeader)) + sizeof(Elf64_Shdr), secHeader, header->size - (((void *)secHeader) - ((void *)binHeader))); */
+    /* memcpy(bin + header->size - header->header->e_shnum * sizeof(Elf64_Shdr) + shellcode.size, */ 
+    /* memcpy(bin + header->size - header->header->e_shnum * sizeof(Elf64_Shdr), shellcode.header, shellcode.size); */
+    /* /1* memcpy(bin + header->size + tableSize, shellcode.header, shellcode.size); *1/ */
+    /* binHeader = header->header; */
+    /* header->size += tableSize + secSize; */
+    /* if (binHeader->e_phoff > binHeader->e_shoff) */
+    /*     binHeader->e_phoff += tableSize; */
+    /* binHeader->e_shnum += 1; */
+    /* binHeader->e_entry = (Elf64_Addr)((void *)tmp->p_vaddr); */
     return (0);
 }
 
@@ -154,6 +199,7 @@ int main(int argc, char **argv) {
     errno = 0;
     if (addSection(&header) == -1) {
         dprintf(2, "Error occured during getting %s\n", strerror(errno));
+        return (1);
     }
     if (writeToFile(header) == -1) {
         dprintf(1, "%s\n", strerror(errno));
