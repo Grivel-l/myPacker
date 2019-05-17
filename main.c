@@ -102,6 +102,7 @@ static void obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section) {
 /* } */
 
 static int  addSection(t_header *header) {
+    size_t      i;
     char        *bin;
     Elf64_Shdr  *cpy;
     Elf64_Shdr  *tmp;
@@ -110,7 +111,7 @@ static int  addSection(t_header *header) {
 
     if (getHeader(-1, "./yo", &shellcode) == -1)
         return (-1);
-    if ((cpy = getSectionHeader(header->header, ".text")) == NULL) {
+    if ((cpy = getSectionHeader(header->header, ".fini")) == NULL) {
         return (-1);
     }
     if ((tmp = getSectionHeader(shellcode.header, ".text")) == NULL) {
@@ -124,6 +125,17 @@ static int  addSection(t_header *header) {
     /* cpy->sh_offset = offset; */
     /* cpy->sh_addr = (Elf64_Addr)(bin + offset); */
     /* tmp = cpy->sh_addr; */
+    i = 0;
+    while (i < header->header->e_shnum) {
+        tmp = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
+        if (tmp->sh_addr != 0 && tmp->sh_addr > header->size - header->header->e_shnum * sizeof(Elf64_Shdr))
+            tmp->sh_addr += sizeof(Elf64_Shdr);
+        if (tmp->sh_offset > header->size - header->header->e_shnum * sizeof(Elf64_Shdr))
+            tmp->sh_offset += sizeof(Elf64_Shdr);
+        if (tmp->sh_link != SHN_UNDEF)
+            tmp->sh_link += 1;
+        i += 1;
+    }
     offset = 0;
     header->header->e_shstrndx += 1;
     header->header->e_shnum += 1;
@@ -131,7 +143,8 @@ static int  addSection(t_header *header) {
     offset += header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr);
     /* memcpy(bin + offset, cpy, sizeof(Elf64_Shdr)); */
     /* (void)cpy; */
-    memset(bin + offset, 0xcc, sizeof(Elf64_Shdr));
+    /* memset(bin + offset, cpy, sizeof(Elf64_Shdr)); */
+    memcpy(bin + offset, cpy, sizeof(Elf64_Shdr));
     offset += sizeof(Elf64_Shdr);
     memcpy(bin + offset, (void *)header->header + header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr), (header->header->e_shnum - 1) * sizeof(Elf64_Shdr));
     munmap(header->header, header->size);
