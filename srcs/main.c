@@ -102,7 +102,15 @@ int main(int argc, char **argv) {
     (void)obfuscateSection;
     /* createEP(header); */
     errno = 0;
-    if (addSection(&header) == -1) {
+    Elf64_Shdr  *newSection;
+
+    if ((newSection = getSectionHeader(header.header, ".text")) == NULL) {
+        return (-1);
+    }
+    newSection->sh_addr = 0;
+    newSection->sh_type = SHT_NULL;
+    newSection->sh_size = 0;
+    if (addSection(&header, newSection) == -1) {
         dprintf(2, "Error occured during getting %s\n", strerror(errno));
         return (1);
     }
