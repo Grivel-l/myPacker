@@ -8,6 +8,7 @@ void    *getSectionHeader(Elf64_Ehdr *header, const char *section) {
     secHeader = ((void *)header) + header->e_shoff;
     strTable = secHeader + header->e_shstrndx;
     i = 0;
+    // TODO loop over strtable size instead of section's nbr
     while (i < header->e_shnum) {
         if (strcmp(section, ((void *)header + strTable->sh_offset + (secHeader + i)->sh_name)) == 0)
             return (secHeader + i);
