@@ -107,12 +107,12 @@ int main(int argc, char **argv) {
     if ((newSection = getSectionHeader(header.header, ".text")) == NULL) {
         return (1);
     }
-    newSection->sh_addr = 0;
-    newSection->sh_type = SHT_PROGBITS;
-    newSection->sh_size = 0;
-    newSection->sh_flags = SHF_ALLOC | SHF_EXECINSTR;
-    newSection->sh_link = SHN_UNDEF;
-    newSection->sh_info = 0;
+    /* newSection->sh_addr = 0; */
+    /* newSection->sh_type = SHT_PROGBITS; */
+    /* newSection->sh_size = 0; */
+    /* newSection->sh_flags = SHF_ALLOC | SHF_EXECINSTR; */
+    /* newSection->sh_link = SHN_UNDEF; */
+    /* newSection->sh_info = 0; */
     if (addSection(&header, newSection) == -1) {
         dprintf(2, "Error occured during getting %s\n", strerror(errno));
         return (1);

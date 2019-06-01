@@ -58,8 +58,9 @@ void    setPermissions(t_header *header, Elf32_Off addr) {
     i = 0;
     while (i < header->header->e_shnum) {
         section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
-        if (section->sh_offset < addr && section->sh_offset + section->sh_size > addr)
-            section->sh_flags |= SHF_EXECINSTR;
+        (void)addr;
+        /* if (section->sh_offset < addr && section->sh_offset + section->sh_size > addr) */
+        section->sh_flags |= SHF_EXECINSTR;
         i += 1;
     }
 }
@@ -80,7 +81,7 @@ t_cave      get_cave(t_header *header) {
             }
             tmp = 0;
         }
-        else if (((char *)header->header)[offset] == 0)
+        else
             tmp += 1;
         offset += 1;
     }
@@ -109,6 +110,7 @@ t_cave      get_cave(t_header *header) {
 /* } */
 
 static int  addSectionFile(t_header *header, t_cave cc) {
+    int         fd;
     void        *ep;
     Elf64_Phdr  *loadSegment;
 
@@ -116,18 +118,35 @@ static int  addSectionFile(t_header *header, t_cave cc) {
     setPermissions(header, cc.offset);
     if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
         return (-1);
-    dprintf(1, "New entry point is: %lx\n", cc.offset);
+    dprintf(1, "New entry point is: %p\n", NULL + cc.offset);
     ep = ((void *)header->header) + cc.offset;
-    char yo[] = {0x48, 0xc7, 0xc0, 0x00, 0x22, 0x00, 0x00, 0xff, 0xe0, 0xb8, 0x00, 0x00, 0x00, 0x00};
-    memcpy(ep, yo, 14);
+    /* char yo[] = {0x48, 0xc7, 0xc0, 0xe0, 0x10, 0x00, 0x00, 0xff, 0xe0, 0xb8, 0x00, 0x00, 0x00, 0x00}; */
+    /* char yo[] = {0x48, 0xc7, 0xc0, 0xf0, 0x21, 0x00, 0x00, 0xff, 0xe0, 0xb8, 0x00, 0x00, 0x00, 0x00}; */
+    /* char yo[] = {0xb8, 0xe0, 0x10, 0x00, 0x00, 0xff, 0xe0}; */
+    struct stat     stats;
+    unsigned char   *loader;
+
+    if (system("nasm -o loader srcs/loader.s") == -1)
+        return (-1);
+    if (stat("loader", &stats) == -1)
+        return (-1);
+    if ((fd = open("loader", O_RDONLY)) == -1)
+        return (-1);
+    if ((loader = mmap(NULL, stats.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+    {
+        close(fd);
+        return (-1);
+    }
+    close(fd);
+    dprintf(1, "Success\n");
+    memcpy(ep, loader, stats.st_size);
     header->header->e_entry = cc.offset + loadSegment->p_vaddr;
     dprintf(1, "Copied to %p\n", NULL + cc.offset + loadSegment->p_vaddr);
-    (void)yo;
-    (void)ep;
     return (0);
 }
 
 int         addSection(t_header *header, Elf64_Shdr *newSection) {
+    return (addSectionFile(header, get_cave(header)));
     char        *bin;
     size_t      offset;
 

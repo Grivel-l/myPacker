@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <string.h>
 #include <elf.h>
+#include <stdlib.h>
 
 typedef struct  s_header {
     size_t      size;
@@ -27,5 +28,6 @@ void            *getSectionHeader(Elf64_Ehdr *header, const char *section);
 void            obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section);
 
 Elf64_Phdr      *getSegment(t_header *header, Elf64_Word type);
+Elf64_Phdr      *getLastSegment(t_header *header, Elf64_Word type);
 
 #endif
