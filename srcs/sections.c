@@ -51,6 +51,7 @@ static void updateSectionOffsets(t_header *header) {
     }
 }
 
+// TODO Just set execution flag on right section
 void    setPermissions(t_header *header, Elf32_Off addr) {
     size_t      i;
     Elf64_Shdr  *section;
@@ -59,7 +60,7 @@ void    setPermissions(t_header *header, Elf32_Off addr) {
     while (i < header->header->e_shnum) {
         section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
         (void)addr;
-        /* if (section->sh_offset < addr && section->sh_offset + section->sh_size > addr) */
+        /* if (section->sh_offset <= addr && section->sh_offset + section->sh_size >= addr) */
         section->sh_flags |= SHF_EXECINSTR;
         i += 1;
     }
@@ -92,23 +93,6 @@ t_cave      get_cave(t_header *header) {
     return (cc);
 }
 
-/* void    insertSectionFile(t_header *header, Elf32_Off addr, Elf64_Xword size) { */
-/*     char    *bin; */
-/*     size_t  offset; */
-
-/*     if ((bin = mmap(NULL, header->size + 300, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED) */
-/*         return ; */
-/*     checkSectionPermissions(header, addr); */
-/*     offset = 0; */
-/*     append(bin, header->header, addr + size, &offset); */
-/*     memset(bin + offset, 0, 300); */
-/*     offset += 300; */
-/*     append(bin, ((void *)header->header) + offset - 300, header->size - offset - 300, &offset); */
-/*     munmap(header->header, header->size); */
-/*     header->header = (Elf64_Ehdr *)bin; */
-/*     header->size += 300; */
-/* } */
-
 static int  addSectionFile(t_header *header, t_cave cc) {
     int         fd;
     void        *ep;
@@ -120,9 +104,6 @@ static int  addSectionFile(t_header *header, t_cave cc) {
         return (-1);
     dprintf(1, "New entry point is: %p\n", NULL + cc.offset);
     ep = ((void *)header->header) + cc.offset;
-    /* char yo[] = {0x48, 0xc7, 0xc0, 0xe0, 0x10, 0x00, 0x00, 0xff, 0xe0, 0xb8, 0x00, 0x00, 0x00, 0x00}; */
-    /* char yo[] = {0x48, 0xc7, 0xc0, 0xf0, 0x21, 0x00, 0x00, 0xff, 0xe0, 0xb8, 0x00, 0x00, 0x00, 0x00}; */
-    /* char yo[] = {0xb8, 0xe0, 0x10, 0x00, 0x00, 0xff, 0xe0}; */
     struct stat     stats;
     unsigned char   *loader;
 
