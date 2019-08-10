@@ -142,19 +142,7 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += sizeof(Elf64_Shdr);
-    return (0);
-    return (addSectionFile(header, get_cave(header)));
-
-    if ((bin = mmap(NULL, header->size + sizeof(Elf64_Shdr), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
-        return (-1);
     updateSectionOffsets(header);
-    header->header->e_shstrndx += 1;
-    header->header->e_shnum += 1;
-    append(bin, header->header, header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr), &offset);
-    append(bin, newSection, sizeof(Elf64_Shdr), &offset);
-    append(bin, (void *)header->header + header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr), (header->header->e_shnum - 1) * sizeof(Elf64_Shdr), &offset);
-    munmap(header->header, header->size);
-    header->header = (Elf64_Ehdr *)bin;
-    header->size += sizeof(Elf64_Shdr);
+    return (0);
     return (addSectionFile(header, get_cave(header)));
 }
