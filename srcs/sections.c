@@ -59,8 +59,8 @@ void    setPermissions(t_header *header, Elf32_Off addr) {
     i = 0;
     while (i < header->header->e_shnum) {
         section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
-        (void)addr;
         /* if (section->sh_offset <= addr && section->sh_offset + section->sh_size >= addr) */
+        (void)addr;
         section->sh_flags |= SHF_EXECINSTR;
         i += 1;
     }
@@ -113,30 +113,43 @@ static int  addSectionFile(t_header *header, t_cave cc) {
         return (-1);
     if ((fd = open("loader", O_RDONLY)) == -1)
         return (-1);
-    if ((loader = mmap(NULL, stats.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+    if ((loader = mmap(NULL, stats.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
     {
         close(fd);
         return (-1);
     }
     close(fd);
-    dprintf(1, "Success\n");
+    dprintf(1, "Success, v_addr: %p\n", NULL + loadSegment->p_vaddr);
     memcpy(ep, loader, stats.st_size);
     header->header->e_entry = cc.offset + loadSegment->p_vaddr;
     dprintf(1, "Copied to %p\n", NULL + cc.offset + loadSegment->p_vaddr);
+    /* munmap(loader, stats.st_size); */
     return (0);
 }
 
 int         addSection(t_header *header, Elf64_Shdr *newSection) {
-    return (addSectionFile(header, get_cave(header)));
     char        *bin;
     size_t      offset;
+    
+    if ((bin = mmap(NULL, header->size + sizeof(Elf64_Shdr), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+        return (-1);
+    header->header->e_shnum += 1;
+    header->header->e_shstrndx += 1;
+    offset = 0;
+    append(bin, header->header, header->header->e_shoff + sizeof(Elf64_Shdr), &offset);
+    append(bin, newSection, sizeof(Elf64_Shdr), &offset);
+    append(bin, ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr), header->size - (header->header->e_shoff + sizeof(Elf64_Shdr)), &offset);
+    munmap(header->header, header->size);
+    header->header = (Elf64_Ehdr *)bin;
+    header->size += sizeof(Elf64_Shdr);
+    return (0);
+    return (addSectionFile(header, get_cave(header)));
 
     if ((bin = mmap(NULL, header->size + sizeof(Elf64_Shdr), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     updateSectionOffsets(header);
     header->header->e_shstrndx += 1;
     header->header->e_shnum += 1;
-    offset = 0;
     append(bin, header->header, header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr), &offset);
     append(bin, newSection, sizeof(Elf64_Shdr), &offset);
     append(bin, (void *)header->header + header->size - (header->header->e_shnum - 1) * sizeof(Elf64_Shdr), (header->header->e_shnum - 1) * sizeof(Elf64_Shdr), &offset);
