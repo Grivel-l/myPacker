@@ -53,8 +53,8 @@ static void updateOffsets(t_header *header) {
             section->sh_offset += sizeof(Elf64_Shdr);
         if (section->sh_link != SHN_UNDEF)
             section->sh_link += 1;
-        if (program->p_offset != 0 && header->header->e_shoff + sizeof(Elf64_Shdr))
-            program->p_offset += sizeof(Elf64_Shdr);
+        /* if (program->p_offset != 0 && header->header->e_shoff + sizeof(Elf64_Shdr)) */
+        /*     program->p_offset += sizeof(Elf64_Shdr); */
         if (program->p_vaddr > header->header->e_shoff + sizeof(Elf64_Shdr))
             program->p_vaddr += sizeof(Elf64_Shdr);
         if (program->p_paddr > header->header->e_shoff + sizeof(Elf64_Shdr))
