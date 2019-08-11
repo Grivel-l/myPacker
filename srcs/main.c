@@ -76,7 +76,6 @@ int writeToFile(t_header header) {
 int main(int argc, char **argv) {
     int         fd;
     t_header    header;
-    Elf64_Shdr  *section;
 
     if (argc != 2) {
         dprintf(2, "Usage: myPacker arg\n");
@@ -94,10 +93,6 @@ int main(int argc, char **argv) {
         dprintf(2, "File is not an elf file\n");
         return (1);
     }
-    if ((section = getSectionHeader(header.header, ".text")) == NULL) {
-        dprintf(2, "No text section in file\n");
-        return (1);
-    }
     /* obfuscateSection(header.header, section); */
     (void)obfuscateSection;
     /* createEP(header); */
@@ -113,14 +108,18 @@ int main(int argc, char **argv) {
     /* newSection->sh_flags = SHF_ALLOC | SHF_EXECINSTR; */
     /* newSection->sh_link = SHN_UNDEF; */
     /* newSection->sh_info = 0; */
+    if (addStr(&header) == -1) {
+      dprintf(2, "Couldn't add str\n");
+      return (1);
+    }
     if (addSection(&header, newSection) == -1) {
         dprintf(2, "Error occured during getting %s\n", strerror(errno));
         return (1);
     }
-    if (writeToFile(header) == -1) {
-        dprintf(1, "%s\n", strerror(errno));
-        return (1);
-    }
+    /* if (writeToFile(header) == -1) { */
+    /*     dprintf(1, "%s\n", strerror(errno)); */
+    /*     return (1); */
+    /* } */
     munmap(header.header, header.size);
     return (0);
 }
