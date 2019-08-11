@@ -108,18 +108,19 @@ int main(int argc, char **argv) {
     /* newSection->sh_flags = SHF_ALLOC | SHF_EXECINSTR; */
     /* newSection->sh_link = SHN_UNDEF; */
     /* newSection->sh_info = 0; */
+    /* newSection->sh_name = 259; */
     if (addStr(&header) == -1) {
       dprintf(2, "Couldn't add str\n");
       return (1);
     }
-    if (addSection(&header, newSection) == -1) {
-        dprintf(2, "Error occured during getting %s\n", strerror(errno));
-        return (1);
-    }
-    /* if (writeToFile(header) == -1) { */
-    /*     dprintf(1, "%s\n", strerror(errno)); */
+    /* if (addSection(&header, newSection) == -1) { */
+    /*     dprintf(2, "Error occured during getting %s\n", strerror(errno)); */
     /*     return (1); */
     /* } */
+    if (writeToFile(header) == -1) {
+        dprintf(1, "%s\n", strerror(errno));
+        return (1);
+    }
     munmap(header.header, header.size);
     return (0);
 }

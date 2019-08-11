@@ -34,7 +34,7 @@ static void append(void *bin, void *toAppend, size_t size, size_t *offset) {
     *offset += size;
 }
 
-static void updateOffsets(t_header *header, size_t offset, size_t toAdd) {
+static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t newSection) {
     size_t      i;
     Elf64_Shdr  *section;
     Elf64_Phdr  *program;
@@ -51,7 +51,7 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd) {
             section->sh_addr += toAdd;
         if (section->sh_offset > offset)
             section->sh_offset += toAdd;
-        if (section->sh_link != SHN_UNDEF)
+        if (section->sh_link != SHN_UNDEF && newSection)
             section->sh_link += 1;
         /* if (program->p_offset != 0 && offset) */
         /*     program->p_offset += toAdd; */
@@ -145,7 +145,7 @@ int         addStr(t_header *header) {
     size_t        offset2;
     Elf64_Shdr    *strtab;
 
-    if ((bin = mmap(NULL, header->size + strlen(".packed"), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+    if ((bin = mmap(NULL, header->size + strlen(".packed") + 1, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     offset = 0;
     strtab = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
@@ -157,7 +157,16 @@ int         addStr(t_header *header) {
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += strlen(".packed") + 1;
-    updateOffsets(header, offset2, strlen(".packed") + 1);
+    updateOffsets(header, offset2, strlen(".packed") + 1, 0);
+    strtab = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
+    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[0] = '\0'; */
+    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[1] = '\0'; */
+    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[2] = '\0'; */
+    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[3] = '\0'; */
+    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[4] = '\0'; */
+    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[5] = '\0'; */
+    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[6] = '\0'; */
+    dprintf(1, "%s\n", (char *)(((void *)header->header) + strtab->sh_offset + 259));
     return (0);
 }
 
@@ -177,7 +186,7 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     header->header = (Elf64_Ehdr *)bin;
     header->size += sizeof(Elf64_Shdr);
     // TODO end of section headers instead of beginning
-    updateOffsets(header, header->header->e_shoff, sizeof(Elf64_Shdr));
+    updateOffsets(header, header->header->e_shoff, sizeof(Elf64_Shdr), 1);
     return (0);
     return (addSectionFile(header, get_cave(header)));
 }
