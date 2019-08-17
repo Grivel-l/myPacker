@@ -51,6 +51,7 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
         program = ((void *)header->header) + header->header->e_phoff + i * sizeof(Elf64_Ehdr);
         if (section->sh_offset >= offset)
             section->sh_offset += toAdd;
+        // TODO Better way to handle this
         if (section->sh_link != SHN_UNDEF && isSection)
             section->sh_link += 1;
         i += 1;
