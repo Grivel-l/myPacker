@@ -76,6 +76,7 @@ int writeToFile(t_header header) {
 int main(int argc, char **argv) {
     int         fd;
     t_header    header;
+    Elf64_Shdr  newSection;
 
     if (argc != 2) {
         dprintf(2, "Usage: myPacker arg\n");
@@ -97,11 +98,6 @@ int main(int argc, char **argv) {
     (void)obfuscateSection;
     /* createEP(header); */
     errno = 0;
-    Elf64_Shdr  newSection;
-
-    /* if ((newSection = getSectionHeader(header.header, ".text")) == NULL) { */
-    /*     return (1); */
-    /* } */
     if (addStr(&header) == -1) {
       dprintf(2, "Couldn't add str\n");
       return (1);
