@@ -34,7 +34,7 @@ static void append(void *bin, void *toAppend, size_t size, size_t *offset) {
     *offset += size;
 }
 
-static void updateOffsets(t_header *header, size_t offset, size_t toAdd) {
+static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t isSection) {
     size_t      i;
     Elf64_Shdr  *section;
     Elf64_Phdr  *program;
@@ -51,6 +51,8 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd) {
         program = ((void *)header->header) + header->header->e_phoff + i * sizeof(Elf64_Ehdr);
         if (section->sh_offset >= offset)
             section->sh_offset += toAdd;
+        if (section->sh_link != SHN_UNDEF && isSection)
+            section->sh_link += 1;
         i += 1;
     }
 }
@@ -151,29 +153,28 @@ int         addStr(t_header *header) {
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += length;
-    // TODO Better way to update offsets
-    updateOffsets(header, offset2, length);
-    dprintf(1, "Offset2: %i, e_shoff: %i\n", offset2, header->header->e_shoff);
+    updateOffsets(header, offset2, length, 0);
     return (0);
 }
 
 int         addSection(t_header *header, Elf64_Shdr *newSection) {
     char        *bin;
     size_t      offset;
+    size_t      offset2;
     
     if ((bin = mmap(NULL, header->size + sizeof(Elf64_Shdr), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     header->header->e_shnum += 1;
     header->header->e_shstrndx += 1;
     offset = 0;
+    offset2 = header->header->e_shoff + sizeof(Elf64_Shdr);
     append(bin, header->header, header->header->e_shoff + sizeof(Elf64_Shdr), &offset);
     append(bin, newSection, sizeof(Elf64_Shdr), &offset);
     append(bin, ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr), header->size - (header->header->e_shoff + sizeof(Elf64_Shdr)), &offset);
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += sizeof(Elf64_Shdr);
-    // TODO end of section headers instead of beginning
-    updateOffsets(header, header->header->e_shoff, sizeof(Elf64_Shdr));
+    updateOffsets(header, offset2, sizeof(Elf64_Shdr), 1);
     return (0);
     return (addSectionFile(header, get_cave(header)));
 }
