@@ -141,30 +141,25 @@ static int  addSectionFile(t_header *header, t_cave cc) {
 
 int         addStr(t_header *header) {
     char          *bin;
+    size_t        length;
     size_t        offset;
-    /* size_t        offset2; */
-    Elf64_Shdr    *section;
-    size_t  length;
+    Elf64_Shdr    *shstrtab;
 
     length = strlen(".packed") + 1;
     if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     offset = 0;
-    section = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
-    /* offset2 = section->sh_offset + section->sh_size; */
-    section->sh_size += length;
-    append(bin, header->header, section->sh_offset + section->sh_size - length, &offset);
+    shstrtab = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
+    shstrtab->sh_size += length;
+    append(bin, header->header, shstrtab->sh_offset + shstrtab->sh_size - length, &offset);
     append(bin, ".packed", length, &offset);
-    // TODO Should append to ((void *)header->header) + section->sh_offset + (section->sh_size - length)
-    append(bin, ((void *)header->header) + section->sh_offset + section->sh_size, header->size - (offset - length), &offset);
+    append(bin, ((void *)header->header) + shstrtab->sh_offset + (shstrtab->sh_size - length), header->size - (offset - length), &offset);
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += length;
+    // TODO Better way to update offsets
     /* updateOffsets(header, offset2, length, 0); */
-    // TODO Shouldn't be needed
-    section = ((void *)header->header) + header->header->e_shoff;
-    section->sh_name = 0;
-    section->sh_type = 0;
+    header->header->e_shoff += length;
     return (0);
 }
 
