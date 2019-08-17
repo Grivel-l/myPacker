@@ -34,31 +34,23 @@ static void append(void *bin, void *toAppend, size_t size, size_t *offset) {
     *offset += size;
 }
 
-static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t newSection) {
+static void updateOffsets(t_header *header, size_t offset, size_t toAdd) {
     size_t      i;
     Elf64_Shdr  *section;
     Elf64_Phdr  *program;
 
-    if (header->header->e_entry > offset)
+    if (header->header->e_entry >= offset)
       header->header->e_entry += toAdd;
-    if (header->header->e_phoff > offset)
+    if (header->header->e_phoff >= offset)
       header->header->e_phoff += toAdd;
+    if (header->header->e_shoff >= offset)
+      header->header->e_shoff += toAdd;
     i = 0;
     while (i < header->header->e_shnum) {
         section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
         program = ((void *)header->header) + header->header->e_phoff + i * sizeof(Elf64_Ehdr);
-        if (section->sh_addr != 0 && section->sh_addr > offset)
-            section->sh_addr += toAdd;
-        if (section->sh_offset > offset)
+        if (section->sh_offset >= offset)
             section->sh_offset += toAdd;
-        if (section->sh_link != SHN_UNDEF && newSection)
-            section->sh_link += 1;
-        /* if (program->p_offset != 0 && offset) */
-        /*     program->p_offset += toAdd; */
-        if (program->p_vaddr > offset)
-            program->p_vaddr += toAdd;
-        if (program->p_paddr > offset)
-            program->p_paddr += toAdd;
         i += 1;
     }
 }
@@ -143,6 +135,7 @@ int         addStr(t_header *header) {
     char          *bin;
     size_t        length;
     size_t        offset;
+    size_t        offset2;
     Elf64_Shdr    *shstrtab;
 
     length = strlen(".packed") + 1;
@@ -151,6 +144,7 @@ int         addStr(t_header *header) {
     offset = 0;
     shstrtab = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
     shstrtab->sh_size += length;
+    offset2 = shstrtab->sh_offset + shstrtab->sh_size - length;
     append(bin, header->header, shstrtab->sh_offset + shstrtab->sh_size - length, &offset);
     append(bin, ".packed", length, &offset);
     append(bin, ((void *)header->header) + shstrtab->sh_offset + (shstrtab->sh_size - length), header->size - (offset - length), &offset);
@@ -158,8 +152,8 @@ int         addStr(t_header *header) {
     header->header = (Elf64_Ehdr *)bin;
     header->size += length;
     // TODO Better way to update offsets
-    /* updateOffsets(header, offset2, length, 0); */
-    header->header->e_shoff += length;
+    updateOffsets(header, offset2, length);
+    dprintf(1, "Offset2: %i, e_shoff: %i\n", offset2, header->header->e_shoff);
     return (0);
 }
 
@@ -179,7 +173,7 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     header->header = (Elf64_Ehdr *)bin;
     header->size += sizeof(Elf64_Shdr);
     // TODO end of section headers instead of beginning
-    updateOffsets(header, header->header->e_shoff, sizeof(Elf64_Shdr), 1);
+    updateOffsets(header, header->header->e_shoff, sizeof(Elf64_Shdr));
     return (0);
     return (addSectionFile(header, get_cave(header)));
 }
