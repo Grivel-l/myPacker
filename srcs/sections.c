@@ -142,7 +142,7 @@ static int  addSectionFile(t_header *header, t_cave cc) {
 int         addStr(t_header *header) {
     char          *bin;
     size_t        offset;
-    size_t        offset2;
+    /* size_t        offset2; */
     Elf64_Shdr    *section;
     size_t  length;
 
@@ -151,12 +151,8 @@ int         addStr(t_header *header) {
         return (-1);
     offset = 0;
     section = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
-    offset2 = section->sh_offset + section->sh_size;
+    /* offset2 = section->sh_offset + section->sh_size; */
     section->sh_size += length;
-    char  *hello;
-
-    hello = (char *)(((void *)header->header) + section->sh_offset + section->sh_size - length);
-    dprintf(1, "But: %i\n", *hello);
     append(bin, header->header, section->sh_offset + section->sh_size - length, &offset);
     append(bin, ".packed", length, &offset);
     // TODO Should append to ((void *)header->header) + section->sh_offset + (section->sh_size - length)
@@ -169,14 +165,6 @@ int         addStr(t_header *header) {
     section = ((void *)header->header) + header->header->e_shoff;
     section->sh_name = 0;
     section->sh_type = 0;
-    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[0] = '\0'; */
-    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[1] = '\0'; */
-    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[2] = '\0'; */
-    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[3] = '\0'; */
-    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[4] = '\0'; */
-    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[5] = '\0'; */
-    /* ((char *)(((void *)header->header) + strtab->sh_offset + 259))[6] = '\0'; */
-    /* dprintf(1, "%s\n", (char *)(((void *)header->header) + strtab->sh_offset + 259)); */
     return (0);
 }
 
