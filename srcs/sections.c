@@ -58,34 +58,7 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
     }
 }
 
-t_cave      get_cave(t_header *header) {
-    t_cave  cc;
-    size_t  tmp;
-    size_t  offset;
-
-    tmp = 0;
-    offset = 0;
-    cc.size = 0;
-    while (offset < header->size) {
-        if (((char *)header->header)[offset] != 0) {
-            if (tmp != 0 && tmp > cc.size) {
-                cc.size = tmp;
-                cc.offset = offset - tmp;
-            }
-            tmp = 0;
-        }
-        else
-            tmp += 1;
-        offset += 1;
-    }
-    if (tmp > cc.size) {
-        cc.size = tmp;
-        cc.offset = offset - tmp;
-    }
-    return (cc);
-}
-
-static int  addSectionFile(t_header *header, t_cave cc) {
+static int  addSectionFile(t_header *header) {
     char          *bin;
     size_t        length;
     size_t        offset;
@@ -118,8 +91,8 @@ static int  addSectionFile(t_header *header, t_cave cc) {
     dprintf(2, "Original entry point: %p\n", NULL + header->header->e_entry);
     if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
         return (-1);
-    dprintf(1, "New entry point is: %p\n", NULL + cc.offset);
-    ep = ((void *)header->header) + cc.offset;
+    // dprintf(1, "New entry point is: %p\n", NULL + cc.offset);
+    // ep = ((void *)header->header) + cc.offset;
     struct stat     stats;
     unsigned char   *loader;
 
@@ -137,8 +110,8 @@ static int  addSectionFile(t_header *header, t_cave cc) {
     close(fd);
     dprintf(1, "Success, v_addr: %p\n", NULL + loadSegment->p_vaddr);
     memcpy(ep, loader, stats.st_size);
-    header->header->e_entry = cc.offset + loadSegment->p_vaddr;
-    dprintf(1, "Copied to %p\n", NULL + cc.offset + loadSegment->p_vaddr);
+    // header->header->e_entry = cc.offset + loadSegment->p_vaddr;
+    // dprintf(1, "Copied to %p\n", NULL + cc.offset + loadSegment->p_vaddr);
     /* munmap(loader, stats.st_size); */
     return (0);
 }
@@ -185,5 +158,5 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     header->header = (Elf64_Ehdr *)bin;
     header->size += sizeof(Elf64_Shdr);
     updateOffsets(header, offset2, sizeof(Elf64_Shdr), 1);
-    return (addSectionFile(header, get_cave(header)));
+    return (addSectionFile(header));
 }
