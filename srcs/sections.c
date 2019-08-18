@@ -176,6 +176,5 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     header->header = (Elf64_Ehdr *)bin;
     header->size += sizeof(Elf64_Shdr);
     updateOffsets(header, offset2, sizeof(Elf64_Shdr), 1);
-    return (0);
     return (addSectionFile(header, get_cave(header)));
 }
