@@ -58,61 +58,67 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
     }
 }
 
-static int  addSectionFile(t_header *header) {
-    char          *bin;
-    size_t        length;
-    size_t        offset;
-    size_t        offset2;
-    Elf64_Shdr    *section;
-
-    length = 100;
-    if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
-        return (-1);
-    offset = 0;
-    offset2 = header->header->e_shoff + header->header->e_shnum * header->header->e_shentsize;
-    append(bin, header->header, offset2 - 1, &offset);
-    memset(bin + offset, 0, length);
-    offset += length;
-    append(bin, ((void *)header->header) + offset2, header->size - (offset2 - 1), &offset);
-    munmap(header->header, header->size);
-    header->header = (Elf64_Ehdr *)bin;
-    header->size += length;
-    updateOffsets(header, offset2, length, 0);
-    section = getSectionHeader(header->header, ".packed");
-    section->sh_offset = offset2;
-    section->sh_size = length;
-    return (0);
-
-    return (0);
-    int         fd;
-    void        *ep;
-    Elf64_Phdr  *loadSegment;
-
-    dprintf(2, "Original entry point: %p\n", NULL + header->header->e_entry);
-    if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
-        return (-1);
-    // dprintf(1, "New entry point is: %p\n", NULL + cc.offset);
-    // ep = ((void *)header->header) + cc.offset;
+static int  getShellcode(t_header *shellcode) {
+    int             fd;
     struct stat     stats;
-    unsigned char   *loader;
 
     if (system("nasm -o loader srcs/loader.s") == -1)
         return (-1);
     if (stat("loader", &stats) == -1)
         return (-1);
+    shellcode->size = stats.st_size;
     if ((fd = open("loader", O_RDONLY)) == -1)
         return (-1);
-    if ((loader = mmap(NULL, stats.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+    if ((shellcode->header = mmap(NULL, shellcode->size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
     {
         close(fd);
         return (-1);
     }
     close(fd);
-    dprintf(1, "Success, v_addr: %p\n", NULL + loadSegment->p_vaddr);
-    memcpy(ep, loader, stats.st_size);
-    // header->header->e_entry = cc.offset + loadSegment->p_vaddr;
-    // dprintf(1, "Copied to %p\n", NULL + cc.offset + loadSegment->p_vaddr);
-    /* munmap(loader, stats.st_size); */
+    return (0);
+}
+    /* dprintf(1, "Success, v_addr: %p\n", NULL + loadSegment->p_vaddr); */
+    /* memcpy(ep, loader, stats.st_size); */
+
+/* kk */
+    /* void        *ep; */
+    /* Elf64_Phdr  *loadSegment; */
+
+    /* dprintf(2, "Original entry point: %p\n", NULL + header->header->e_entry); */
+    /* if ((loadSegment = getSegment(header, PT_LOAD)) == NULL) */
+    /*     return (-1); */
+    /* // dprintf(1, "New entry point is: %p\n", NULL + cc.offset); */
+    /* // ep = ((void *)header->header) + cc.offset; */
+
+    /* // header->header->e_entry = cc.offset + loadSegment->p_vaddr; */
+    /* // dprintf(1, "Copied to %p\n", NULL + cc.offset + loadSegment->p_vaddr); */
+    /* /1* munmap(loader, stats.st_size); *1/ */
+    /* return (0); */
+
+static int  addSectionFile(t_header *header) {
+    char          *bin;
+    size_t        offset;
+    size_t        offset2;
+    Elf64_Shdr    *section;
+    t_header      shellcode;
+
+    if (getShellcode(&shellcode) == -1)
+      return (-1);
+    if ((bin = mmap(NULL, header->size + shellcode.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+      return (-1);
+    offset = 0;
+    offset2 = header->header->e_shoff + header->header->e_shnum * header->header->e_shentsize;
+    append(bin, header->header, offset2 - 1, &offset);
+    append(bin, shellcode.header, shellcode.size, &offset);
+    append(bin, ((void *)header->header) + offset2, header->size - (offset2 - 1), &offset);
+    munmap(header->header, header->size);
+    header->header = (Elf64_Ehdr *)bin;
+    header->size += shellcode.size;
+    updateOffsets(header, offset2, shellcode.size, 0);
+    section = getSectionHeader(header->header, ".packed");
+    section->sh_offset = offset2;
+    section->sh_size = shellcode.size;
+    munmap(shellcode.header, shellcode.size);
     return (0);
 }
 
