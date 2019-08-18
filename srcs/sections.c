@@ -58,21 +58,6 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
     }
 }
 
-// TODO Just set execution flag on right section
-void    setPermissions(t_header *header, Elf32_Off addr) {
-    size_t      i;
-    Elf64_Shdr  *section;
-
-    i = 0;
-    while (i < header->header->e_shnum) {
-        section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
-        /* if (section->sh_offset <= addr && section->sh_offset + section->sh_size >= addr) */
-        (void)addr;
-        section->sh_flags |= SHF_EXECINSTR;
-        i += 1;
-    }
-}
-
 t_cave      get_cave(t_header *header) {
     t_cave  cc;
     size_t  tmp;
@@ -101,12 +86,36 @@ t_cave      get_cave(t_header *header) {
 }
 
 static int  addSectionFile(t_header *header, t_cave cc) {
+    char          *bin;
+    size_t        length;
+    size_t        offset;
+    size_t        offset2;
+    Elf64_Shdr    *section;
+
+    length = 100;
+    if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+        return (-1);
+    offset = 0;
+    offset2 = header->header->e_shoff + header->header->e_shnum * header->header->e_shentsize;
+    append(bin, header->header, offset2 - 1, &offset);
+    memset(bin + offset, 0, length);
+    offset += length;
+    append(bin, ((void *)header->header) + offset2, header->size - (offset2 - 1), &offset);
+    munmap(header->header, header->size);
+    header->header = (Elf64_Ehdr *)bin;
+    header->size += length;
+    updateOffsets(header, offset2, length, 0);
+    section = getSectionHeader(header->header, ".packed");
+    section->sh_offset = offset2;
+    section->sh_size = length;
+    return (0);
+
+    return (0);
     int         fd;
     void        *ep;
     Elf64_Phdr  *loadSegment;
 
     dprintf(2, "Original entry point: %p\n", NULL + header->header->e_entry);
-    setPermissions(header, cc.offset);
     if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
         return (-1);
     dprintf(1, "New entry point is: %p\n", NULL + cc.offset);
