@@ -1,2 +1,2 @@
 [bits 64]
-jmp $
+int3
