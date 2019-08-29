@@ -26,5 +26,6 @@ void            obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section);
 
 Elf64_Phdr      *getSegment(t_header *header, Elf64_Word type);
 Elf64_Phdr      *getLastSegment(t_header *header, Elf64_Word type);
+Elf64_Phdr      *getFlaggedSegment(t_header *header, Elf64_Word type, Elf64_Word flag);
 
 #endif
