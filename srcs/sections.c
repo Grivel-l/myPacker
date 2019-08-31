@@ -48,12 +48,24 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
     i = 0;
     while (i < header->header->e_shnum) {
         section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
-        program = ((void *)header->header) + header->header->e_phoff + i * sizeof(Elf64_Ehdr);
         if (section->sh_offset >= offset)
             section->sh_offset += toAdd;
+        if (section->sh_addr >= offset)
+            section->sh_addr += toAdd;
         // TODO Better way to handle this
         if (section->sh_link != SHN_UNDEF && isSection)
             section->sh_link += 1;
+        i += 1;
+    }
+    i = 0;
+    while (i < header->header->e_phnum) {
+        program = ((void *)header->header) + header->header->e_phoff + i * sizeof(Elf64_Phdr);
+        if (program->p_offset >= offset)
+            program->p_offset += toAdd;
+        if (program->p_vaddr >= offset)
+            program->p_vaddr += toAdd;
+        if (program->p_paddr >= offset)
+            program->p_paddr += toAdd;
         i += 1;
     }
 }
@@ -108,24 +120,26 @@ static int  addSectionFile(t_header *header) {
     section = getSectionHeader(header->header, ".text");
     offset2 = section->sh_offset + section->sh_size;
     append(bin, header->header, offset2 - 1, &offset);
-    /* append(bin, shellcode.header, shellcode.size, &offset); */
+    append(bin, shellcode.header, shellcode.size, &offset);
     append(bin, ((void *)header->header) + offset2 - 1, header->size - (offset2 - 1), &offset);
-    /* munmap(header->header, header->size); */
-    /* header->header = (Elf64_Ehdr *)bin; */
-    /* header->size += shellcode.size; */
-    /* updateOffsets(header, offset2, shellcode.size, 0); */
-    dprintf(2, "HelloWorld\n");
+    munmap(header->header, header->size);
+    header->header = (Elf64_Ehdr *)bin;
+    header->size += shellcode.size;
+    updateOffsets(header, offset2, shellcode.size, 0);
     /* section = getSectionHeader(header->header, ".packed"); */
-    /* section->sh_addr = offset2; */
-    /* section->sh_offset = offset2; */
-    /* section->sh_size = shellcode.size; */
-    return (0);
-    /* char  *yo; */
-    /* yo = ((void *)header->header) + section->sh_offset; */
-    /* memcpy(yo, shellcode.header, shellcode.size); */
-    /* munmap(shellcode.header, shellcode.size); */
+    dprintf(2, "HelloWorld\n");
+    section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr);
+    dprintf(2, "Section: %zu\n", section->sh_name);
+    section->sh_addr = offset2;
+    section->sh_offset = offset2;
+    section->sh_size = shellcode.size;
+    Elf64_Phdr  *loadSegment;
+    if ((loadSegment = getFlaggedSegment(header, PT_LOAD, PF_X)) == NULL)
+      return (-1);
+    loadSegment->p_memsz += section->sh_size;
+    loadSegment->p_filesz += section->sh_size;
     dprintf(2, "Added section file\n");
-    /* return (0); */
+    return (0);
     return (setNewEP(header));
 }
 
@@ -136,6 +150,7 @@ int         setNewEP(t_header *header) {
     if ((loadSegment = getFlaggedSegment(header, PT_LOAD, PF_X)) == NULL)
       return (-1);
     packed = getSectionHeader(header->header, ".packed");
+    packed = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr);
     loadSegment->p_memsz += packed->sh_size;
     loadSegment->p_filesz += packed->sh_size;
     if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
