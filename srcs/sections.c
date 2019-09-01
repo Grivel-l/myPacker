@@ -55,6 +55,32 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
         // TODO Better way to handle this
         if (section->sh_link != SHN_UNDEF && isSection)
             section->sh_link += 1;
+        if (section->sh_type == SHT_REL) {
+            Elf64_Rel *rel;
+            rel = ((void *)header->header) + section->sh_offset;
+        } else if (section->sh_type == SHT_RELA) {
+            Elf64_Rela  *rela;
+            rela = ((void *)header->header) + section->sh_offset;
+            if (rela->r_offset >= offset)
+              rela->r_offset += toAdd;
+        } else if (section->sh_type == SHT_DYNAMIC) {
+            Elf64_Dyn *dyn;
+            dyn = ((void *)header->header) + section->sh_offset;
+            if (dyn->d_un.d_ptr >= offset) {
+              dyn->d_un.d_ptr += toAdd;
+            }
+            /* Elf64_Move  *move; */
+            /* move = ((void *)header->header) + dyn->d_un.d_ptr; */
+            /* if (move->m_poffset >= offset) */
+            /*   move->m_poffset += toAdd; */
+        } else if (section->sh_type == SHT_GNU_verdef) {
+            Elf64_Verdef  *verdef;
+            verdef = ((void *)header->header) + section->sh_offset;
+            if (section->sh_offset < offset && verdef->vd_aux >= offset)
+              verdef->vd_aux += toAdd;
+            if (section->sh_offset < offset && verdef->vd_next >= offset)
+              verdef->vd_aux += toAdd;
+        }
         i += 1;
     }
     i = 0;
@@ -116,20 +142,21 @@ static int  addSectionFile(t_header *header) {
     if ((bin = mmap(NULL, header->size + shellcode.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
       return (-1);
     offset = 0;
-    /* offset2 = header->header->e_shoff + header->header->e_shnum * header->header->e_shentsize; */
     section = getSectionHeader(header->header, ".text");
-    offset2 = section->sh_offset + section->sh_size;
+    offset2 = section->sh_offset;
+    section->sh_offset += 1;
+    section->sh_addr += 1;
+    /* ((char *)header->header)[offset2] = ((char *)shellcode.header)[0]; */
+    dprintf(2, "Shellcode size: %zu\n", shellcode.size);
     append(bin, header->header, offset2 - 1, &offset);
     append(bin, shellcode.header, shellcode.size, &offset);
     append(bin, ((void *)header->header) + offset2 - 1, header->size - (offset2 - 1), &offset);
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += shellcode.size;
-    updateOffsets(header, offset2, shellcode.size, 0);
-    /* section = getSectionHeader(header->header, ".packed"); */
-    dprintf(2, "HelloWorld\n");
+    updateOffsets(header, offset2, 1, 0);
     section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr);
-    dprintf(2, "Section: %zu\n", section->sh_name);
+    /* dprintf(2, "Section: %zu\n", section->sh_name); */
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
