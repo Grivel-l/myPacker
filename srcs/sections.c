@@ -54,8 +54,8 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
         if (section->sh_addr >= offset)
             section->sh_addr += toAdd;
         // TODO Better way to handle this
-        /* if (section->sh_link != SHN_UNDEF && isSection) */
-        /*     section->sh_link += 1; */
+        if (section->sh_link != SHN_UNDEF && isSection && section->sh_link >= header->header->e_shnum - 3)
+            section->sh_link += 1;
         if (section->sh_type == SHT_REL) {
             Elf64_Rel *rel;
             rel = ((void *)header->header) + section->sh_offset;
@@ -144,6 +144,7 @@ static int  addSectionFile(t_header *header) {
       return (-1);
     offset = 0;
     section = getSectionHeader(header->header, ".text");
+    dprintf(2, "section: %p\n", section);
     offset2 = section->sh_offset;
     section->sh_offset += shellcode.size;
     section->sh_addr += shellcode.size;
@@ -222,11 +223,13 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     header->header->e_shnum += 1;
+    header->header->e_shstrndx += 1;
     offset = 0;
-    offset2 = header->header->e_shoff + sizeof(Elf64_Shdr) * (header->header->e_shnum - 1);
-    append(bin, header->header, header->header->e_shoff + length, &offset);
+    // TODO Better way to handle this
+    offset2 = header->header->e_shoff + sizeof(Elf64_Shdr) * (header->header->e_shnum - 1) - sizeof(Elf64_Shdr) * 3;
+    append(bin, header->header, offset2, &offset);
     append(bin, newSection, length, &offset);
-    append(bin, ((void *)header->header) + header->header->e_shoff + length, header->size - (header->header->e_shoff + length), &offset);
+    append(bin, ((void *)header->header) + offset2, header->size - offset2, &offset);
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += length;
