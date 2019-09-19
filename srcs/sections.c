@@ -157,8 +157,8 @@ static int  addSectionFile(t_header *header) {
     header->header = (Elf64_Ehdr *)bin;
     header->size += shellcode.size;
     updateOffsets(header, offset2, shellcode.size, 0);
-    section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr);
-    /* dprintf(2, "Section: %zu\n", section->sh_name); */
+    /* section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr); */
+    section = getSectionHeader(header->header, ".packed");
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
