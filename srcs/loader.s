@@ -1,3 +1,3 @@
 [bits 64]
-int3
+nop
 int3
