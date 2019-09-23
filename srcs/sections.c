@@ -39,7 +39,8 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
     Elf64_Shdr  *section;
     Elf64_Phdr  *program;
 
-    dprintf(2, "Updating offsets of %zu\n", toAdd);
+    /* dprintf(2, "Updating offsets of %zu\n", toAdd); */
+    dprintf(2, "Updating offsets\n");
     if (header->header->e_entry >= offset)
       header->header->e_entry += toAdd;
     if (header->header->e_phoff >= offset)
@@ -157,19 +158,11 @@ static int  addSectionFile(t_header *header) {
     header->header = (Elf64_Ehdr *)bin;
     header->size += shellcode.size;
     updateOffsets(header, offset2, shellcode.size, 0);
-    header->header->e_entry = 0x1100;
     /* section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr); */
     section = getSectionHeader(header->header, ".packed");
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
-    Elf64_Phdr  *loadSegment;
-    if ((loadSegment = getFlaggedSegment(header, PT_LOAD, PF_X)) == NULL)
-      return (-1);
-    loadSegment->p_memsz += section->sh_size;
-    loadSegment->p_filesz += section->sh_size;
-    dprintf(2, "Added section file\n");
-    return (0);
     return (setNewEP(header));
 }
 
@@ -180,7 +173,6 @@ int         setNewEP(t_header *header) {
     if ((loadSegment = getFlaggedSegment(header, PT_LOAD, PF_X)) == NULL)
       return (-1);
     packed = getSectionHeader(header->header, ".packed");
-    packed = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr);
     loadSegment->p_memsz += packed->sh_size;
     loadSegment->p_filesz += packed->sh_size;
     if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
