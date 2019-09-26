@@ -2,24 +2,18 @@
 
 section .text
   nop
-  nop
-  nop
-  nop
   call put
-  call exit
-
   msg:
-    db "HelloWorld", 10
+    db "....WOODY....", 10
   put:
+    mov rsi, [rsp]
     mov rax, 1
     mov rdi, 1
-    mov rsi, msg
-    mov rdx, 11
+    mov rdx, 14
     syscall
-    ret
-
+  call exit
   exit:
-    int3
     mov rax, 60
     mov rdi, 0
     syscall
+
