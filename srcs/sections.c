@@ -60,6 +60,8 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
         if (section->sh_type == SHT_REL) {
             Elf64_Rel *rel;
             rel = ((void *)header->header) + section->sh_offset;
+            if (rel->r_offset >= offset)
+              rel->r_offset += toAdd;
         } else if (section->sh_type == SHT_RELA) {
             Elf64_Rela  *rela;
             rela = ((void *)header->header) + section->sh_offset;
@@ -82,6 +84,17 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
               verdef->vd_aux += toAdd;
             if (section->sh_offset < offset && verdef->vd_next >= offset)
               verdef->vd_aux += toAdd;
+        } else if (section->sh_type == SHT_SYMTAB) {
+          Elf64_Xword size;
+          Elf64_Sym   *symbol;
+          size = 0;
+          while (size < section->sh_size) {
+            symbol = ((void *)header->header) + section->sh_offset + size;
+            if (symbol->st_value >= offset) {
+              symbol->st_value += toAdd;
+            }
+            size += sizeof(Elf64_Sym);
+          }
         }
         i += 1;
     }
@@ -109,7 +122,7 @@ static int  getShellcode(t_header *shellcode) {
     shellcode->size = stats.st_size;
     if ((fd = open("loader", O_RDONLY)) == -1)
         return (-1);
-    if ((shellcode->header = mmap(NULL, shellcode->size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+    if ((shellcode->header = mmap(NULL, shellcode->size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
     {
         close(fd);
         return (-1);
@@ -141,17 +154,17 @@ static int  addSectionFile(t_header *header) {
 
     if (getShellcode(&shellcode) == -1)
       return (-1);
+    shellcode.size += 24;
     if ((bin = mmap(NULL, header->size + shellcode.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
       return (-1);
     offset = 0;
     section = getSectionHeader(header->header, ".text");
-    dprintf(2, "section: %p\n", section);
+    dprintf(2, "Text offset before anything: %p\n", section->sh_offset);
     offset2 = section->sh_offset;
-    section->sh_offset += shellcode.size;
-    section->sh_addr += shellcode.size;
     /* ((char *)header->header)[offset2] = ((char *)shellcode.header)[0]; */
-    dprintf(2, "Shellcode size: %zu\n", shellcode.size);
+    /* dprintf(2, "Shellcode size: %zu\n", shellcode.size); */
     append(bin, header->header, offset2 - 1, &offset);
+    memset(shellcode.header, 0, shellcode.size);
     append(bin, shellcode.header, shellcode.size, &offset);
     append(bin, ((void *)header->header) + offset2 - 1, header->size - (offset2 - 1), &offset);
     munmap(header->header, header->size);
@@ -159,6 +172,10 @@ static int  addSectionFile(t_header *header) {
     header->size += shellcode.size;
     updateOffsets(header, offset2, shellcode.size, 0);
     /* section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr); */
+    section = getSectionHeader(header->header, ".text");
+    dprintf(2, "Text offset after adding section content: %p\n", section->sh_offset);
+    /* section->sh_offset = ((int)section->sh_offset) + shellcode.size; */
+    /* section->sh_addr += shellcode.size; */
     section = getSectionHeader(header->header, ".packed");
     section->sh_addr = offset2;
     section->sh_offset = offset2;
@@ -177,7 +194,10 @@ int         setNewEP(t_header *header) {
     loadSegment->p_filesz += packed->sh_size;
     if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
       return (-1);
+    packed = getSectionHeader(header->header, ".text");
     header->header->e_entry = packed->sh_offset + loadSegment->p_vaddr;
+    /* packed = getSectionHeader(header->header, ".text"); */
+    /* header->header->e_entry = packed->sh_offset + loadSegment->p_vaddr; */
     dprintf(2, "New entry point: %p\n", header->header->e_entry);
     return (0);
 }
@@ -189,7 +209,8 @@ int         addStr(t_header *header) {
     size_t        offset2;
     Elf64_Shdr    *shstrtab;
 
-    length = strlen(".packed") + 1;
+    // TODO remove alignment
+    length = strlen(".packed        ") + 1;
     if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     offset = 0;

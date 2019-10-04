@@ -2,18 +2,23 @@
 
 section .text
   nop
+  push rax
+  push rdi
+  push rsi
+  push rdx
   call put
   msg:
     db "....WOODY....", 10
   put:
-    mov rsi, [rsp]
     mov rax, 1
     mov rdi, 1
+    mov rsi, [rsp]
     mov rdx, 14
     syscall
-  call exit
-  exit:
-    mov rax, 60
-    mov rdi, 0
-    syscall
-
+  pop rdx
+  pop rsi
+  pop rdi
+  pop rax
+  int3
+  push 0x1168
+  ret
