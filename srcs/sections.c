@@ -36,6 +36,7 @@ static void append(void *bin, void *toAppend, size_t size, size_t *offset) {
 
 static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t isSection) {
     size_t      i;
+    size_t      size;
     Elf64_Shdr  *section;
     Elf64_Phdr  *program;
 
@@ -59,19 +60,31 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
             section->sh_link += 1;
         if (section->sh_type == SHT_REL) {
             Elf64_Rel *rel;
-            rel = ((void *)header->header) + section->sh_offset;
-            if (rel->r_offset >= offset)
-              rel->r_offset += toAdd;
+            size = 0;
+            while (size < section->sh_size) {
+              rel = ((void *)header->header) + section->sh_offset + (sizeof(Elf64_Rel) * (size / sizeof(Elf64_Rel)));
+              if (rel->r_offset >= offset)
+                rel->r_offset += toAdd;
+              size += sizeof(Elf64_Rel);
+            }
         } else if (section->sh_type == SHT_RELA) {
             Elf64_Rela  *rela;
-            rela = ((void *)header->header) + section->sh_offset;
-            if (rela->r_offset >= offset)
-              rela->r_offset += toAdd;
+            size = 0;
+            while (size < section->sh_size) {
+              rela = ((void *)header->header) + section->sh_offset + (sizeof(Elf64_Rela) * (size / sizeof(Elf64_Rela)));
+              if (rela->r_offset >= offset)
+                rela->r_offset += toAdd;
+              size += sizeof(Elf64_Rela);
+            }
         } else if (section->sh_type == SHT_DYNAMIC) {
             Elf64_Dyn *dyn;
-            dyn = ((void *)header->header) + section->sh_offset;
-            if (dyn->d_un.d_ptr >= offset) {
-              dyn->d_un.d_ptr += toAdd;
+            size = 0;
+            while (size < section->sh_size) {
+              dyn = ((void *)header->header) + section->sh_offset + (sizeof(Elf64_Dyn) * (size / sizeof(Elf64_Dyn)));
+              if (dyn->d_un.d_ptr >= offset) {
+                dyn->d_un.d_ptr += toAdd;
+              }
+              size += sizeof(Elf64_Dyn);
             }
             /* Elf64_Move  *move; */
             /* move = ((void *)header->header) + dyn->d_un.d_ptr; */
@@ -107,6 +120,16 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
             program->p_vaddr += toAdd;
         if (program->p_paddr >= offset)
             program->p_paddr += toAdd;
+        /* if (program->p_type == PT_DYNAMIC) { */
+        /*     Elf64_Dyn *dyn; */
+        /*     dyn = ((void *)header->header) + program->p_offset; */
+        /*     if (dyn->d_un.d_ptr >= offset) { */
+        /*       dyn->d_un.d_ptr += toAdd; */
+        /*     } */
+        /*     if (dyn->d_un.d_val >= offset) { */
+        /*       dyn->d_un.d_val += toAdd; */
+        /*     } */
+        /* } */
         i += 1;
     }
 }
