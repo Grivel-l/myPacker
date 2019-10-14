@@ -1,5 +1,39 @@
 #include "packer.h"
 
+/* static void printStrtable(t_header *header) { */
+/*     Elf64_Shdr  *strtable; */
+/*     strtable = ((void *)header->header) + header->header->e_shoff + (sizeof(Elf64_Shdr) * header->header->e_shstrndx); */
+/*     dprintf(1, "\n\n"); */
+/*     write(1, ((void *)header->header) + strtable->sh_offset, 100); */
+/*     dprintf(1, "\n\n"); */
+/* } */
+
+/* static void findLibcStart(t_header *header) { */
+/*     size_t      i; */
+/*     size_t      index; */
+/*     Elf64_Sym   *symbol; */
+/*     Elf64_Shdr  *section; */
+/*     char        *strtable; */
+
+/*     index = 0; */
+/*     section = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr); */
+/*     strtable = ((void *)header->header) + section->sh_offset; */
+/*     write(1, strtable, 100); */
+/*     section = ((void *)header->header) + header->header->e_shoff; */
+/*     while (index < header->header->e_shnum) { */
+/*       if (section->sh_type == SHT_SYMTAB || section->sh_type == SHT_DYNSYM) { */
+/*         i = 0; */
+/*         while (i < section->sh_size) { */
+/*           symbol = ((void *)header->header) + section->sh_offset + sizeof(Elf64_Sym) * (i / sizeof(Elf64_Sym)); */
+/*           dprintf(1, "Symbol: %s, Value: %i\n", strtable + symbol->st_name, symbol->st_size); */
+/*           i += sizeof(Elf64_Sym); */
+/*         } */
+/*       } */
+/*       index += 1; */
+/*       section += 1; */
+/*     } */
+/* } */
+
 void    *getSectionHeader(Elf64_Ehdr *header, const char *section) {
     Elf64_Half  i;
     Elf64_Shdr  *strTable;
@@ -72,8 +106,12 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
             size = 0;
             while (size < section->sh_size) {
               rela = ((void *)header->header) + section->sh_offset + (sizeof(Elf64_Rela) * (size / sizeof(Elf64_Rela)));
-              if (rela->r_offset >= offset)
-                rela->r_offset += toAdd;
+              if (rela->r_offset > offset) {
+                // TODO Remove this
+                if (!(rela->r_offset == 0x4fe0 && toAdd == 8)) {
+                  rela->r_offset += toAdd;
+                }
+              }
               size += sizeof(Elf64_Rela);
             }
         } else if (section->sh_type == SHT_DYNAMIC) {
@@ -81,9 +119,8 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
             size = 0;
             while (size < section->sh_size) {
               dyn = ((void *)header->header) + section->sh_offset + (sizeof(Elf64_Dyn) * (size / sizeof(Elf64_Dyn)));
-              if (dyn->d_un.d_ptr >= offset) {
+              if (dyn->d_un.d_ptr >= offset)
                 dyn->d_un.d_ptr += toAdd;
-              }
               size += sizeof(Elf64_Dyn);
             }
             /* Elf64_Move  *move; */
@@ -103,6 +140,7 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
           size = 0;
           while (size < section->sh_size) {
             symbol = ((void *)header->header) + section->sh_offset + size;
+            /* dprintf(2, "Symbol: %s\n", ((void *)header->header) + strtable->sh_offset + symbol->st_name); */
             if (symbol->st_value >= offset) {
               symbol->st_value += toAdd;
             }
@@ -183,7 +221,9 @@ static int  addSectionFile(t_header *header) {
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += shellcode.size;
+    dprintf(2, "Add section file\n");
     updateOffsets(header, offset2, shellcode.size, 0);
+    /* findLibcStart(header); */
     /* section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr); */
     section = getSectionHeader(header->header, ".text");
     dprintf(2, "Text offset after adding section content: %p\n", section->sh_offset);
@@ -193,6 +233,7 @@ static int  addSectionFile(t_header *header) {
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
+    /* yo(header); */
     return (setNewEP(header));
 }
 
@@ -222,14 +263,13 @@ int         addStr(t_header *header) {
     size_t        offset2;
     Elf64_Shdr    *shstrtab;
 
-    // TODO remove alignment
-    length = strlen(".packed        ") + 1;
+    length = strlen(".packed") + 1;
     if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     offset = 0;
     shstrtab = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
+    offset2 = shstrtab->sh_offset + shstrtab->sh_size;
     shstrtab->sh_size += length;
-    offset2 = shstrtab->sh_offset + shstrtab->sh_size - length;
     append(bin, header->header, shstrtab->sh_offset + shstrtab->sh_size - length, &offset);
     append(bin, ".packed", length, &offset);
     append(bin, ((void *)header->header) + shstrtab->sh_offset + (shstrtab->sh_size - length), header->size - (offset - length), &offset);
@@ -260,6 +300,7 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += length;
+    dprintf(1, "Add section\n");
     updateOffsets(header, offset2, length, 1);
     return (addSectionFile(header));
 }
