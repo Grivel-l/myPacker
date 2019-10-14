@@ -120,16 +120,6 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
             program->p_vaddr += toAdd;
         if (program->p_paddr >= offset)
             program->p_paddr += toAdd;
-        /* if (program->p_type == PT_DYNAMIC) { */
-        /*     Elf64_Dyn *dyn; */
-        /*     dyn = ((void *)header->header) + program->p_offset; */
-        /*     if (dyn->d_un.d_ptr >= offset) { */
-        /*       dyn->d_un.d_ptr += toAdd; */
-        /*     } */
-        /*     if (dyn->d_un.d_val >= offset) { */
-        /*       dyn->d_un.d_val += toAdd; */
-        /*     } */
-        /* } */
         i += 1;
     }
 }
