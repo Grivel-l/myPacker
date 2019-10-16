@@ -162,6 +162,83 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
     }
 }
 
+static void updateOffsets2(t_header *header, size_t offset, size_t toAdd, size_t isSection) {
+    size_t      i;
+    Elf64_Shdr  *section;
+    Elf64_Phdr  *program;
+
+    /* dprintf(2, "Updating offsets of %zu\n", toAdd); */
+    dprintf(2, "Updating offsets\n");
+    if (header->header->e_entry >= offset)
+      header->header->e_entry += toAdd;
+    if (header->header->e_phoff >= offset)
+      header->header->e_phoff += toAdd;
+    if (header->header->e_shoff >= offset)
+      header->header->e_shoff += toAdd;
+    i = 0;
+    while (i < header->header->e_shnum) {
+        section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
+        if (section->sh_offset >= offset)
+            section->sh_offset += toAdd;
+        if (section->sh_addr >= offset)
+            section->sh_addr += toAdd;
+        // TODO Better way to handle this
+        if (section->sh_link != SHN_UNDEF && isSection && section->sh_link >= header->header->e_shnum - 3)
+            section->sh_link += 1;
+        if (section->sh_type == SHT_REL) {
+            Elf64_Rel *rel;
+            rel = ((void *)header->header) + section->sh_offset;
+            if (rel->r_offset >= offset)
+              rel->r_offset += toAdd;
+        } else if (section->sh_type == SHT_RELA) {
+            Elf64_Rela  *rela;
+            rela = ((void *)header->header) + section->sh_offset;
+            if (rela->r_offset >= offset)
+              rela->r_offset += toAdd;
+        } else if (section->sh_type == SHT_DYNAMIC) {
+            Elf64_Dyn *dyn;
+            dyn = ((void *)header->header) + section->sh_offset;
+            if (dyn->d_un.d_ptr >= offset) {
+              dyn->d_un.d_ptr += toAdd;
+            }
+            /* Elf64_Move  *move; */
+            /* move = ((void *)header->header) + dyn->d_un.d_ptr; */
+            /* if (move->m_poffset >= offset) */
+            /*   move->m_poffset += toAdd; */
+        } else if (section->sh_type == SHT_GNU_verdef) {
+            Elf64_Verdef  *verdef;
+            verdef = ((void *)header->header) + section->sh_offset;
+            if (section->sh_offset < offset && verdef->vd_aux >= offset)
+              verdef->vd_aux += toAdd;
+            if (section->sh_offset < offset && verdef->vd_next >= offset)
+              verdef->vd_aux += toAdd;
+        } else if (section->sh_type == SHT_SYMTAB) {
+          Elf64_Xword size;
+          Elf64_Sym   *symbol;
+          size = 0;
+          while (size < section->sh_size) {
+            symbol = ((void *)header->header) + section->sh_offset + size;
+            if (symbol->st_value >= offset) {
+              symbol->st_value += toAdd;
+            }
+            size += sizeof(Elf64_Sym);
+          }
+        }
+        i += 1;
+    }
+    i = 0;
+    while (i < header->header->e_phnum) {
+        program = ((void *)header->header) + header->header->e_phoff + i * sizeof(Elf64_Phdr);
+        if (program->p_offset >= offset)
+            program->p_offset += toAdd;
+        if (program->p_vaddr >= offset)
+            program->p_vaddr += toAdd;
+        if (program->p_paddr >= offset)
+            program->p_paddr += toAdd;
+        i += 1;
+    }
+}
+
 static int  getShellcode(t_header *shellcode) {
     int             fd;
     struct stat     stats;
@@ -276,7 +353,7 @@ int         addStr(t_header *header) {
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += length;
-    updateOffsets(header, offset2, length, 0);
+    updateOffsets2(header, offset2, length, 0);
     return (0);
 }
 
@@ -301,6 +378,6 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     header->header = (Elf64_Ehdr *)bin;
     header->size += length;
     dprintf(1, "Add section\n");
-    updateOffsets(header, offset2, length, 1);
+    updateOffsets2(header, offset2, length, 1);
     return (addSectionFile(header));
 }

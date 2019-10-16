@@ -1,5 +1,30 @@
 #include "packer.h"
 
+static void findLibcStart(t_header *header) {
+    size_t      i;
+    size_t      index;
+    Elf64_Sym   *symbol;
+    Elf64_Shdr  *section;
+    char        *strtable;
+
+    index = 0;
+    section = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
+    strtable = ((void *)header->header) + section->sh_offset;
+    section = ((void *)header->header) + header->header->e_shoff;
+    while (index < header->header->e_shnum) {
+      if (section->sh_type == SHT_SYMTAB || section->sh_type == SHT_DYNSYM) {
+        i = 0;
+        while (i < section->sh_size) {
+          symbol = ((void *)header->header) + section->sh_offset + sizeof(Elf64_Sym) * (i / sizeof(Elf64_Sym));
+          dprintf(1, "Symbol: %s, Value: %i\n", strtable + symbol->st_name, symbol->st_size);
+          i += sizeof(Elf64_Sym);
+        }
+      }
+      index += 1;
+      section += 1;
+    }
+}
+
 int         getHeader(int fd, const char *path, t_header *header) {
     size_t      opened;
     struct stat stats;
@@ -102,6 +127,7 @@ int main(int argc, char **argv) {
       dprintf(2, "Couldn't add str\n");
       return (1);
     }
+    /* findLibcStart(&header); */
     Elf64_Shdr  *yo;
     yo = getSectionHeader(header.header, ".text");
     newSection = *yo;
@@ -116,6 +142,7 @@ int main(int argc, char **argv) {
     /* newSection.sh_info = 0; */
     /* newSection.sh_addralign = 16; */
     /* newSection.sh_entsize = 0; */
+
     if (addSection(&header, &newSection) == -1) {
         dprintf(2, "Error occured during getting %s\n", strerror(errno));
         return (1);
@@ -132,4 +159,3 @@ int main(int argc, char **argv) {
     dprintf(2, "Done\n");
     return (0);
 }
-

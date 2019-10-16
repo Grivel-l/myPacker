@@ -2,6 +2,7 @@
 
 section .text
   nop
+  int3
   push rax
   push rdi
   push rsi
