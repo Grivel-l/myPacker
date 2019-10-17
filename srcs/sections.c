@@ -78,8 +78,10 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
     dprintf(2, "Updating offsets\n");
     if (header->header->e_entry >= offset)
       header->header->e_entry += toAdd;
+    dprintf(2, "e_shoff: %p, offset: %p\n", header->header->e_shoff, offset);
     if (header->header->e_phoff >= offset)
       header->header->e_phoff += toAdd;
+    dprintf(2, "e_shoff: %p, offset: %p\n", header->header->e_shoff, offset);
     if (header->header->e_shoff >= offset)
       header->header->e_shoff += toAdd;
     i = 0;
@@ -286,9 +288,9 @@ static int  addSectionFile(t_header *header) {
     if ((bin = mmap(NULL, header->size + shellcode.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
       return (-1);
     offset = 0;
-    section = getSectionHeader(header->header, ".text");
-    dprintf(2, "Text offset before anything: %p\n", section->sh_offset);
-    offset2 = section->sh_offset;
+    section = getSectionHeader(header->header, ".bss");
+    dprintf(2, "Here:  %p, %p\n", section->sh_addr, header->header->e_shoff);
+    offset2 = header->header->e_shoff + sizeof(Elf64_Shdr) * header->header->e_shnum;
     /* ((char *)header->header)[offset2] = ((char *)shellcode.header)[0]; */
     /* dprintf(2, "Shellcode size: %zu\n", shellcode.size); */
     append(bin, header->header, offset2 - 1, &offset);
@@ -302,15 +304,15 @@ static int  addSectionFile(t_header *header) {
     updateOffsets(header, offset2, shellcode.size, 0);
     /* findLibcStart(header); */
     /* section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr); */
-    section = getSectionHeader(header->header, ".text");
-    dprintf(2, "Text offset after adding section content: %p\n", section->sh_offset);
     /* section->sh_offset = ((int)section->sh_offset) + shellcode.size; */
     /* section->sh_addr += shellcode.size; */
     section = getSectionHeader(header->header, ".packed");
+    dprintf(2, "HelloWorld %p\n", section);
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
     /* yo(header); */
+    return (0);
     return (setNewEP(header));
 }
 
@@ -325,7 +327,6 @@ int         setNewEP(t_header *header) {
     loadSegment->p_filesz += packed->sh_size;
     if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
       return (-1);
-    packed = getSectionHeader(header->header, ".text");
     header->header->e_entry = packed->sh_offset + loadSegment->p_vaddr;
     /* packed = getSectionHeader(header->header, ".text"); */
     /* header->header->e_entry = packed->sh_offset + loadSegment->p_vaddr; */
