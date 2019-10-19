@@ -284,17 +284,11 @@ static int  addSectionFile(t_header *header) {
 
     if (getShellcode(&shellcode) == -1)
       return (-1);
-    shellcode.size += 24;
     if ((bin = mmap(NULL, header->size + shellcode.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
       return (-1);
     offset = 0;
-    section = getSectionHeader(header->header, ".bss");
-    dprintf(2, "Here:  %p, %p\n", section->sh_addr, header->header->e_shoff);
     offset2 = header->header->e_shoff + sizeof(Elf64_Shdr) * header->header->e_shnum;
-    /* ((char *)header->header)[offset2] = ((char *)shellcode.header)[0]; */
-    /* dprintf(2, "Shellcode size: %zu\n", shellcode.size); */
     append(bin, header->header, offset2 - 1, &offset);
-    memset(shellcode.header, 0, shellcode.size);
     append(bin, shellcode.header, shellcode.size, &offset);
     append(bin, ((void *)header->header) + offset2 - 1, header->size - (offset2 - 1), &offset);
     munmap(header->header, header->size);
@@ -302,16 +296,10 @@ static int  addSectionFile(t_header *header) {
     header->size += shellcode.size;
     dprintf(2, "Add section file\n");
     updateOffsets(header, offset2, shellcode.size, 0);
-    /* findLibcStart(header); */
-    /* section = ((void *)header->header) + header->header->e_shoff + sizeof(Elf64_Shdr); */
-    /* section->sh_offset = ((int)section->sh_offset) + shellcode.size; */
-    /* section->sh_addr += shellcode.size; */
     section = getSectionHeader(header->header, ".packed");
-    dprintf(2, "HelloWorld %p\n", section);
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
-    /* yo(header); */
     return (0);
     return (setNewEP(header));
 }
