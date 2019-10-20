@@ -154,6 +154,11 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
     i = 0;
     while (i < header->header->e_phnum) {
         program = ((void *)header->header) + header->header->e_phoff + i * sizeof(Elf64_Phdr);
+        // TODO Handle memsz and filesz correctly
+        if (offset >= program->p_offset && offset < program->p_offset + program->p_filesz) {
+            program->p_memsz += toAdd;
+            program->p_filesz += toAdd;
+        }
         if (program->p_offset >= offset)
             program->p_offset += toAdd;
         if (program->p_vaddr >= offset)
@@ -275,6 +280,42 @@ static int  getShellcode(t_header *shellcode) {
     /* /1* munmap(loader, stats.st_size); *1/ */
     /* return (0); */
 
+static int    createSegment(t_header *header) {
+    char        *bin;
+    size_t      length;
+    size_t      offset;
+    size_t      offset2;
+    Elf64_Phdr  *tmp;
+    Elf64_Phdr  segment;
+    Elf64_Shdr  *section;
+
+    if ((tmp = getSegment(header, PT_LOAD)) == NULL)
+      return (-1);
+    segment = *tmp;
+    section = getSectionHeader(header->header, ".packed");
+    segment.p_flags |= PF_X;
+    segment.p_offset = section->sh_offset;
+    segment.p_vaddr = section->sh_offset;
+    segment.p_paddr = section->sh_offset;
+    segment.p_filesz = section->sh_size;
+    segment.p_memsz = section->sh_size;
+    length = sizeof(Elf64_Phdr);
+    if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+        return (-1);
+    header->header->e_phnum += 1;
+    offset = 0;
+    offset2 = header->header->e_phoff + ((header->header->e_phnum - 1) * sizeof(Elf64_Phdr));
+    append(bin, header->header, offset2, &offset);
+    append(bin, &segment, length, &offset);
+    append(bin, ((void *)header->header) + offset2, header->size - offset2, &offset);
+    munmap(header->header, header->size);
+    header->header = (Elf64_Ehdr *)bin;
+    header->size += length;
+    dprintf(1, "Add segment\n");
+    updateOffsets(header, offset2, length, 0);
+    return (0);
+}
+
 static int  addSectionFile(t_header *header) {
     unsigned char          *bin;
     size_t        offset;
@@ -300,17 +341,52 @@ static int  addSectionFile(t_header *header) {
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
-    return (0);
+    return (createSegment(header));
     return (setNewEP(header));
 }
 
+
+/* static int  findSegment(t_header *header) { */
+/*   Elf64_Phdr  *higher; */
+/*   Elf64_Phdr  *segment; */
+/*   Elf64_Shdr  *section; */
+
+/*   higher = NULL; */
+/*   section = getSectionHeader(header->header, ".packed"); */
+/*   segment = ((void *)header->header) + header->header->e_phoff; */
+/*   while ((void *)segment < ((void *)header->header) + header->header->e_phoff */
+/*     + (header->header->e_phnum * sizeof(Elf64_Phdr))) { */
+/*     if (section->sh_offset >= segment->p_offset + segment->p_filesz && */
+/*       (higher == NULL || higher->p_offset < segment->p_offset)) { */
+/*       higher = segment; */
+/*     } */
+/*     segment = ((void *)segment) + sizeof(Elf64_Phdr); */
+/*   } */
+/*   higher->p_flags |= PF_X; */
+/*   higher->p_flags &= ~PF_W; */
+/*   higher->p_align = 0x1000; */
+/*   higher->p_type = PT_LOAD; */
+/*   higher->p_memsz += section->sh_offset - higher->p_offset - higher->p_filesz +section->sh_size; */
+/*   higher->p_filesz += section->sh_offset - higher->p_offset - higher->p_filesz +section->sh_size; */
+/*   dprintf(2, "Higher: %p\n", higher->p_offset); */
+/*   return (0); */
+/* } */
+
 int         setNewEP(t_header *header) {
+    Elf64_Shdr  *init;
     Elf64_Shdr  *packed;
     Elf64_Phdr  *loadSegment;
 
     if ((loadSegment = getFlaggedSegment(header, PT_LOAD, PF_X)) == NULL)
       return (-1);
+    init = getSectionHeader(header->header, ".init");
     packed = getSectionHeader(header->header, ".packed");
+    loadSegment->p_memsz = packed->sh_offset - init->sh_offset + packed->sh_size;
+    loadSegment->p_filesz = packed->sh_offset - init->sh_offset + packed->sh_size;
+    if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
+      return (-1);
+    header->header->e_entry = packed->sh_offset + loadSegment->p_vaddr;
+    return (0);
     loadSegment->p_memsz += packed->sh_size;
     loadSegment->p_filesz += packed->sh_size;
     if ((loadSegment = getSegment(header, PT_LOAD)) == NULL)
