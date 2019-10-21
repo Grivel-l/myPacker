@@ -89,8 +89,6 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
         section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
         if (section->sh_offset >= offset)
             section->sh_offset += toAdd;
-        if (section->sh_addr >= offset)
-            section->sh_addr += toAdd;
         // TODO Better way to handle this
         if (section->sh_link != SHN_UNDEF && isSection && section->sh_link >= header->header->e_shnum - 3)
             section->sh_link += 1;
@@ -161,10 +159,6 @@ static void updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t 
         }
         if (program->p_offset >= offset)
             program->p_offset += toAdd;
-        if (program->p_vaddr >= offset)
-            program->p_vaddr += toAdd;
-        if (program->p_paddr >= offset)
-            program->p_paddr += toAdd;
         i += 1;
     }
 }
@@ -187,8 +181,6 @@ static void updateOffsets2(t_header *header, size_t offset, size_t toAdd, size_t
         section = (void *)(header->header) + header->header->e_shoff + i * sizeof(Elf64_Shdr);
         if (section->sh_offset >= offset)
             section->sh_offset += toAdd;
-        if (section->sh_addr >= offset)
-            section->sh_addr += toAdd;
         // TODO Better way to handle this
         if (section->sh_link != SHN_UNDEF && isSection && section->sh_link >= header->header->e_shnum - 3)
             section->sh_link += 1;
@@ -238,10 +230,6 @@ static void updateOffsets2(t_header *header, size_t offset, size_t toAdd, size_t
         program = ((void *)header->header) + header->header->e_phoff + i * sizeof(Elf64_Phdr);
         if (program->p_offset >= offset)
             program->p_offset += toAdd;
-        if (program->p_vaddr >= offset)
-            program->p_vaddr += toAdd;
-        if (program->p_paddr >= offset)
-            program->p_paddr += toAdd;
         i += 1;
     }
 }
@@ -280,6 +268,40 @@ static int  getShellcode(t_header *shellcode) {
     /* /1* munmap(loader, stats.st_size); *1/ */
     /* return (0); */
 
+static int    createSegment2(t_header *header) {
+    char        *bin;
+    size_t      length;
+    size_t      offset;
+    size_t      offset2;
+    Elf64_Phdr  *tmp;
+    Elf64_Phdr  segment;
+    Elf64_Shdr  *section;
+
+    if ((tmp = getSegment(header, PT_LOAD)) == NULL)
+      return (-1);
+    segment = *tmp;
+    segment.p_offset = header->header->e_phoff;
+    segment.p_vaddr = header->header->e_phoff;
+    segment.p_paddr = header->header->e_phoff;
+    segment.p_filesz = header->header->e_phnum * sizeof(Elf64_Phdr);
+    segment.p_memsz = header->header->e_phnum * sizeof(Elf64_Phdr);
+    length = sizeof(Elf64_Phdr);
+    if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+        return (-1);
+    header->header->e_phnum += 1;
+    offset = 0;
+    offset2 = header->header->e_phoff + ((header->header->e_phnum - 1) * sizeof(Elf64_Phdr));
+    append(bin, header->header, offset2, &offset);
+    append(bin, &segment, length, &offset);
+    append(bin, ((void *)header->header) + offset2, header->size - offset2, &offset);
+    munmap(header->header, header->size);
+    header->header = (Elf64_Ehdr *)bin;
+    header->size += length;
+    dprintf(1, "Add segment\n");
+    updateOffsets(header, offset2, length, 0);
+    return (0);
+}
+
 static int    createSegment(t_header *header) {
     char        *bin;
     size_t      length;
@@ -313,6 +335,31 @@ static int    createSegment(t_header *header) {
     header->size += length;
     dprintf(1, "Add segment\n");
     updateOffsets(header, offset2, length, 0);
+    return (createSegment2(header));
+}
+
+static int  relocateSegments(t_header *header) {
+    unsigned char *bin;
+    size_t        offset;
+    size_t        length;
+    Elf64_Phdr    *segment;
+
+    dprintf(2, "Offset was %p\n", header->header->e_phoff);
+    length = header->header->e_phnum * sizeof(Elf64_Phdr);
+    if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+      return (-1);
+    offset = 0;
+    append(bin, header->header, header->size, &offset);
+    append(bin, ((void *)header->header) + header->header->e_phoff, length, &offset);
+    munmap(header->header, header->size);
+    header->header = (Elf64_Ehdr *)bin;
+    header->header->e_phoff = header->size;
+    segment = ((void *)header->header) + header->header->e_phoff;
+    segment->p_vaddr = header->size;
+    segment->p_paddr = header->size;
+    segment->p_offset = header->size;
+    header->size += length;
+    dprintf(2, "Offset is now %p\n", header->header->e_phoff);
     return (0);
 }
 
@@ -341,7 +388,9 @@ static int  addSectionFile(t_header *header) {
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
-    return (createSegment(header));
+    /* relocateSegments(header); */
+    /* return (createSegment(header)); */
+    return (0);
     return (setNewEP(header));
 }
 
@@ -428,6 +477,7 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     size_t      offset;
     size_t      offset2;
     
+    return (relocateSegments(header));
     length = sizeof(Elf64_Shdr);
     if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
