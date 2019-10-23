@@ -36,6 +36,7 @@ static t_file getShellcode(void) {
   fd = open("shellcode", O_RDONLY);
   shellcode.header = mmap(NULL, shellcode.size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   close(fd);
+  return shellcode;
   return (patchShellcode(shellcode));
 }
 
@@ -46,10 +47,11 @@ static int  appendShellcode(t_file *bin, t_file shellcode) {
   if ((new.header = mmap(NULL, new.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
     return (-1);
   memcpy(new.header, bin->header, bin->size);
-  memcpy(((void *)new.header) + bin->size, shellcode.header, shellcode.size);
+  memset(((void *)new.header) + bin->size, 0xcc, 1);
+  memcpy(((void *)new.header) + bin->size + 1, shellcode.header, shellcode.size);
   munmap(bin->header, bin->size);
   bin->header = new.header;
-  bin->size = new.size;
+  bin->size = new.size + 1;
   return (0);
 }
 
@@ -71,6 +73,7 @@ static int  makeNew(t_file *bin) {
   segment->p_paddr = bin->size - shellcode.size;
   segment->p_filesz = shellcode.size;
   segment->p_memsz = shellcode.size;
+  dprintf(2, "New entry point: %p\n", NULL + bin->size - shellcode.size);
   bin->header->e_entry = 0xc000000 + bin->size - shellcode.size;
   /* segment->p_align = 0x1000; */
   munmap(shellcode.header, shellcode.size);
