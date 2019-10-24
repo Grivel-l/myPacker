@@ -307,26 +307,22 @@ static int    createSegment(t_header *header) {
     size_t      length;
     size_t      offset;
     size_t      offset2;
-    Elf64_Phdr  *tmp;
     Elf64_Phdr  segment;
-    Elf64_Shdr  *section;
 
-    if ((tmp = getSegment(header, PT_LOAD)) == NULL)
-      return (-1);
-    segment = *tmp;
-    section = getSectionHeader(header->header, ".packed");
-    segment.p_flags |= PF_X;
-    segment.p_offset = section->sh_offset;
-    segment.p_vaddr = section->sh_offset;
-    segment.p_paddr = section->sh_offset;
-    segment.p_filesz = section->sh_size;
-    segment.p_memsz = section->sh_size;
+    segment.p_flags = PF_R | PF_X;
+    segment.p_offset = header->size;
+    segment.p_vaddr = 0xc000000;
+    segment.p_paddr = header->size;
+    segment.p_filesz = 0;
+    segment.p_memsz = 0;
+    segment.p_align = 0x1000;
     length = sizeof(Elf64_Phdr);
     if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);
     header->header->e_phnum += 1;
     offset = 0;
-    offset2 = header->header->e_phoff + ((header->header->e_phnum - 1) * sizeof(Elf64_Phdr));
+    offset2 = header->header->e_phoff + ((header->header->e_phnum - 1) * sizeof(Elf64_Phdr)) - sizeof(Elf64_Phdr) * 4;
+    /* offset2 = header->header->e_phoff + ((header->header->e_phnum - 1) * sizeof(Elf64_Phdr)); */
     append(bin, header->header, offset2, &offset);
     append(bin, &segment, length, &offset);
     append(bin, ((void *)header->header) + offset2, header->size - offset2, &offset);
@@ -335,6 +331,7 @@ static int    createSegment(t_header *header) {
     header->size += length;
     dprintf(1, "Add segment\n");
     updateOffsets(header, offset2, length, 0);
+    return (0);
     return (createSegment2(header));
 }
 
@@ -477,7 +474,8 @@ int         addSection(t_header *header, Elf64_Shdr *newSection) {
     size_t      offset;
     size_t      offset2;
     
-    return (relocateSegments(header));
+    return (createSegment(header));
+    /* return (relocateSegments(header)); */
     length = sizeof(Elf64_Shdr);
     if ((bin = mmap(NULL, header->size + length, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
         return (-1);

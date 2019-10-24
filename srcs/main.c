@@ -123,10 +123,10 @@ int main(int argc, char **argv) {
     (void)obfuscateSection;
     /* createEP(header); */
     errno = 0;
-    if (addStr(&header) == -1) {
-      dprintf(2, "Couldn't add str\n");
-      return (1);
-    }
+    /* if (addStr(&header) == -1) { */
+    /*   dprintf(2, "Couldn't add str\n"); */
+    /*   return (1); */
+    /* } */
     /* findLibcStart(&header); */
     Elf64_Shdr  *yo;
     yo = getSectionHeader(header.header, ".text");
