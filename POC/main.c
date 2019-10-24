@@ -13,9 +13,9 @@ typedef struct  s_file {
 }               t_file;
 
 static t_file patchShellcode(t_file shellcode, size_t oldE_entry, size_t e_entry) {
+  char    ins[5];
+  char    *header;
   size_t  address;
-  char  ins[5];
-  char  *header;
 
   address = -(e_entry - oldE_entry + 1);
   ins[0] = 0xe9;
@@ -79,9 +79,7 @@ static int  makeNew(t_file *bin) {
   segment->p_paddr = bin->size - shellcode.size;
   segment->p_filesz = shellcode.size;
   segment->p_memsz = shellcode.size;
-  dprintf(2, "New entry point: %p\n", NULL + bin->size - shellcode.size);
   bin->header->e_entry = 0xc000000 + bin->size - shellcode.size;
-  /* segment->p_align = 0x1000; */
   munmap(shellcode.header, shellcode.size);
   return (0);
 }
@@ -106,7 +104,6 @@ int   main(int argc, char **argv) {
   fd = open("yo", O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU);
   write(fd, bin.header, bin.size);
   close(fd);
-  dprintf(2, "Entry point:  %p\n", NULL + bin.header->e_entry);
   munmap(bin.header, bin.size);
   dprintf(1, "Done !\n");
   return (0);
