@@ -46,20 +46,18 @@ Elf64_Phdr  *getLastSegment(t_header *header, Elf64_Word type) {
 
 int       noteToLoad(t_header *header) {
     Elf64_Phdr  *phdr;
-    Elf64_Shdr  *shdr;
 
-    shdr = getSectionHeader(header->header, ".packed");
     phdr = ((void *)header->header) + header->header->e_phoff;
     // TODO Loop over phdr nbr
     while (phdr->p_type != PT_NOTE)
       phdr = ((void *)phdr) + sizeof(Elf64_Phdr);
     phdr->p_type = PT_LOAD;
     phdr->p_flags = PF_R | PF_X;
-    phdr->p_offset = shdr->sh_offset;
+    phdr->p_offset = header->header->e_entry - 0xc000000;
     // TODO Better vaddr/Update too in updateEP
-    phdr->p_vaddr = 0xc000000 + shdr->sh_offset;
-    phdr->p_paddr = shdr->sh_offset;
-    phdr->p_filesz = shdr->sh_size;
-    phdr->p_memsz = shdr->sh_size;
+    phdr->p_vaddr = header->header->e_entry;
+    phdr->p_paddr = header->header->e_entry - 0xc000000;
+    phdr->p_filesz = header->header->e_entry - 0xc000000;
+    phdr->p_memsz = header->header->e_entry - 0xc000000;
     return (0);
 }

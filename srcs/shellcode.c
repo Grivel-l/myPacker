@@ -21,7 +21,7 @@ static int  patchShellcode(t_header *shellcode, size_t oep, size_t ep) {
   return (0);
 }
 
-int  getShellcode(t_header *shellcode, size_t oep, size_t ep) {
+static int  getShellcode(t_header *shellcode, size_t oep, size_t ep) {
   int             fd;
   struct stat     stats;
 
@@ -39,5 +39,28 @@ int  getShellcode(t_header *shellcode, size_t oep, size_t ep) {
   }
   close(fd);
   return (patchShellcode(shellcode, oep, 0xc000000 + ep));
+}
+
+int  appendShellcode(t_header *header) {
+  unsigned char *bin;
+  size_t        offset;
+  size_t        offset2;
+  Elf64_Shdr    *section;
+  t_header      shellcode;
+
+  offset2 = header->size;
+  if (getShellcode(&shellcode, header->header->e_entry, offset2) == -1)
+    return (-1);
+  if ((bin = mmap(NULL, header->size + shellcode.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+    return (-1);
+  offset = 0;
+  append(bin, header->header, header->size, &offset);
+  append(bin, shellcode.header, shellcode.size, &offset);
+  munmap(header->header, header->size);
+  header->header = (Elf64_Ehdr *)bin;
+  header->size += shellcode.size;
+  munmap(shellcode.header, shellcode.size);
+  header->header->e_entry = 0xc000000 + offset2;
+  return (0);
 }
 

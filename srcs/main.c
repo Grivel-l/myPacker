@@ -41,13 +41,6 @@ int writeToFile(t_header header) {
     return (0);
 }
 
-void  updateEP(t_header *header) {
-  Elf64_Shdr  *section;
-
-  section = getSectionHeader(header->header, ".packed");
-  header->header->e_entry = 0xc000000 + section->sh_addr;
-}
-
 int main(int argc, char **argv) {
     int         fd;
     t_header    header;
@@ -69,22 +62,10 @@ int main(int argc, char **argv) {
         dprintf(2, "File is not an elf file\n");
         return (1);
     }
-    errno = 0;
-    if (addStr(&header) == -1)
-      return (1);
-    Elf64_Shdr  *yo;
-    yo = getSectionHeader(header.header, ".text");
-    newSection = *yo;
-    newSection.sh_name = 259;
-    newSection.sh_type = SHT_PROGBITS;
-    newSection.sh_flags = SHF_ALLOC | SHF_EXECINSTR;
-    if (addSectionHeader(&header, &newSection) == -1)
-      return (1);
-    if (addSectionFile(&header) == -1)
+    if (appendShellcode(&header) == -1)
       return (1);
     if (noteToLoad(&header) == -1)
       return (1);
-    updateEP(&header);
     if (writeToFile(header) == -1)
       return (1);
     munmap(header.header, header.size);
