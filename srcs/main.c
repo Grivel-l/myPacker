@@ -119,38 +119,23 @@ int main(int argc, char **argv) {
         dprintf(2, "File is not an elf file\n");
         return (1);
     }
-    /* obfuscateSection(header.header, section); */
-    (void)obfuscateSection;
-    /* createEP(header); */
     errno = 0;
-    /* if (addStr(&header) == -1) { */
-    /*   dprintf(2, "Couldn't add str\n"); */
-    /*   return (1); */
-    /* } */
-    /* findLibcStart(&header); */
+    if (addStr(&header) == -1) {
+      dprintf(2, "Couldn't add str\n");
+      return (1);
+    }
     Elf64_Shdr  *yo;
     yo = getSectionHeader(header.header, ".text");
     newSection = *yo;
     newSection.sh_name = 259;
-    /* newSection.sh_name = 259; */
-    /* newSection.sh_type = SHT_PROGBITS; */
-    /* newSection.sh_flags = SHF_ALLOC | SHF_EXECINSTR; */
-    /* newSection.sh_addr = 0; */
-    /* newSection.sh_offset = 0; */
-    /* newSection.sh_size = 0; */
-    /* newSection.sh_link = SHN_UNDEF; */
-    /* newSection.sh_info = 0; */
-    /* newSection.sh_addralign = 16; */
-    /* newSection.sh_entsize = 0; */
+    newSection.sh_name = 259;
+    newSection.sh_type = SHT_PROGBITS;
+    newSection.sh_flags = SHF_ALLOC | SHF_EXECINSTR;
 
     if (addSection(&header, &newSection) == -1) {
         dprintf(2, "Error occured during getting %s\n", strerror(errno));
         return (1);
     }
-    /* if (setNewEP(&header) == -1) { */
-    /*   dprintf(2, "Couldn't set new entry point\n"); */
-    /*   return (1); */
-    /* } */
     if (writeToFile(header) == -1) {
         dprintf(1, "%s\n", strerror(errno));
         return (1);
