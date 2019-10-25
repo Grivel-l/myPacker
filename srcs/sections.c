@@ -229,7 +229,7 @@ static int  addSectionFile(t_header *header) {
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
     return (0);
-}
+}l
 
 int         addStr(t_header *header) {
     char          *bin;
@@ -255,7 +255,7 @@ int         addStr(t_header *header) {
     return (0);
 }
 
-int         addSection(t_header *header, Elf64_Shdr *newSection) {
+int         addSectionHeader(t_header *header, Elf64_Shdr *newSection) {
     char        *bin;
     size_t      length;
     size_t      offset;

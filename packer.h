@@ -20,7 +20,7 @@ int             getHeader(int fd, const char *path, t_header *header);
 
 int             addStr(t_header *header);
 int             setNewEP(t_header *header);
-int             addSection(t_header *header,  Elf64_Shdr *newSection);
+int             addSectionHeader(t_header *header,  Elf64_Shdr *newSection);
 void            *getSectionHeader(Elf64_Ehdr *header, const char *section);
 void            obfuscateSection(Elf64_Ehdr *header, Elf64_Shdr *section);
 
