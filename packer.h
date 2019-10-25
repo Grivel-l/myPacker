@@ -16,7 +16,11 @@ typedef struct  s_header {
     Elf64_Ehdr  *header;
 }               t_header;
 
-int             getHeader(int fd, const char *path, t_header *header);
+int             getShellcode(t_header *shellcode);
+
+void            append(void *bin, void *toAppend, size_t size, size_t *offset);
+void            updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t isSection);
+void            updateOffsets2(t_header *header, size_t offset, size_t toAdd, size_t isSection);
 
 int             addStr(t_header *header);
 int             setNewEP(t_header *header);

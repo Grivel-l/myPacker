@@ -25,7 +25,7 @@ static void findLibcStart(t_header *header) {
     }
 }
 
-int         getHeader(int fd, const char *path, t_header *header) {
+static int         getHeader(int fd, const char *path, t_header *header) {
     size_t      opened;
     struct stat stats;
 
@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
     newSection.sh_type = SHT_PROGBITS;
     newSection.sh_flags = SHF_ALLOC | SHF_EXECINSTR;
 
-    if (addSection(&header, &newSection) == -1) {
+    if (addSectionHeader(&header, &newSection) == -1) {
         dprintf(2, "Error occured during getting %s\n", strerror(errno));
         return (1);
     }
