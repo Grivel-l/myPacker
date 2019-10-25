@@ -24,12 +24,12 @@ int  addSectionFile(t_header *header) {
     Elf64_Shdr    *section;
     t_header      shellcode;
 
-    if (getShellcode(&shellcode) == -1)
+    offset2 = header->header->e_shoff + sizeof(Elf64_Shdr) * header->header->e_shnum;
+    if (getShellcode(&shellcode, header->header->e_entry, offset2) == -1)
       return (-1);
     if ((bin = mmap(NULL, header->size + shellcode.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
       return (-1);
     offset = 0;
-    offset2 = header->header->e_shoff + sizeof(Elf64_Shdr) * header->header->e_shnum;
     append(bin, header->header, offset2 - 1, &offset);
     append(bin, shellcode.header, shellcode.size, &offset);
     append(bin, ((void *)header->header) + offset2 - 1, header->size - (offset2 - 1), &offset);
@@ -41,6 +41,7 @@ int  addSectionFile(t_header *header) {
     section->sh_addr = offset2;
     section->sh_offset = offset2;
     section->sh_size = shellcode.size;
+    munmap(shellcode.header, shellcode.size);
     return (0);
 }
 

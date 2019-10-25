@@ -1,8 +1,6 @@
 [bits 64]
 
 section .text
-  nop
-  int3
   push rax
   push rdi
   push rsi
@@ -20,6 +18,3 @@ section .text
   pop rsi
   pop rdi
   pop rax
-  int3
-  push 0x1168
-  ret

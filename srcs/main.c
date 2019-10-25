@@ -98,6 +98,13 @@ int writeToFile(t_header header) {
 /*     return (ep); */
 /* } */
 
+void  updateEP(t_header *header) {
+  Elf64_Shdr  *section;
+
+  section = getSectionHeader(header->header, ".packed");
+  header->header->e_entry = 0xc000000 + section->sh_addr;
+}
+
 int main(int argc, char **argv) {
     int         fd;
     t_header    header;
@@ -132,6 +139,9 @@ int main(int argc, char **argv) {
       return (1);
     if (addSectionFile(&header) == -1)
       return (1);
+    if (noteToLoad(&header) == -1)
+      return (1);
+    updateEP(&header);
     if (writeToFile(header) == -1)
       return (1);
     munmap(header.header, header.size);
