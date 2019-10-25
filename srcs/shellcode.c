@@ -5,7 +5,7 @@ static int  patchShellcode(t_header *shellcode, size_t oep, size_t ep) {
   char    *header;
   size_t  address;
 
-  address = -(ep - oep + shellcode->size + 5 - 1);
+  address = -(ep - oep + shellcode->size + 5);
   ins[0] = 0xe9;
   ins[1] = (address >> 0) & 0xff;
   ins[2] = (address >> 8) & 0xff;
