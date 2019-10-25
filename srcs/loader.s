@@ -5,15 +5,19 @@ section .text
   push rdi
   push rsi
   push rdx
-  ;call put
-  ;msg:
-  ;  db "....WOODY....", 10
-  ;put:
-  ;  mov rax, 1
-  ;  mov rdi, 1
-  ;  mov rsi, [rsp]
-  ;  mov rdx, 14
-  ;  syscall
+  push rbp
+  mov rbp, rsp
+  call put
+  msg:
+    db "HelloWorld", 10
+  put:
+    mov rax, 1
+    mov rdi, 1
+    mov rsi, [rsp]
+    mov rdx, 11
+    syscall
+  mov rsp, rbp
+  pop rbp
   pop rdx
   pop rsi
   pop rdi
