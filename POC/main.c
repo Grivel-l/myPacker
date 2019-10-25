@@ -17,7 +17,7 @@ static t_file patchShellcode(t_file shellcode, size_t oldE_entry, size_t e_entry
   char    *header;
   size_t  address;
 
-  address = -(e_entry - oldE_entry + 1);
+  address = -(e_entry - oldE_entry + shellcode.size);
   ins[0] = 0xe9;
   ins[1] = (address >> 0) & 0xff;
   ins[2] = (address >> 8) & 0xff;
