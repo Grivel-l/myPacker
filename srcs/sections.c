@@ -17,7 +17,7 @@ void    *getSectionHeader(Elf64_Ehdr *header, const char *section) {
     return (NULL);
 }
 
-static int  addSectionFile(t_header *header) {
+int  addSectionFile(t_header *header) {
     unsigned char          *bin;
     size_t        offset;
     size_t        offset2;
@@ -88,7 +88,6 @@ int         addSectionHeader(t_header *header, Elf64_Shdr *newSection) {
     munmap(header->header, header->size);
     header->header = (Elf64_Ehdr *)bin;
     header->size += length;
-    dprintf(1, "Add section\n");
     updateOffsets2(header, offset2, length, 1);
-    return (addSectionFile(header));
+    return (0);
 }

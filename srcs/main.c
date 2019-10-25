@@ -120,26 +120,20 @@ int main(int argc, char **argv) {
         return (1);
     }
     errno = 0;
-    if (addStr(&header) == -1) {
-      dprintf(2, "Couldn't add str\n");
+    if (addStr(&header) == -1)
       return (1);
-    }
     Elf64_Shdr  *yo;
     yo = getSectionHeader(header.header, ".text");
     newSection = *yo;
     newSection.sh_name = 259;
-    newSection.sh_name = 259;
     newSection.sh_type = SHT_PROGBITS;
     newSection.sh_flags = SHF_ALLOC | SHF_EXECINSTR;
-
-    if (addSectionHeader(&header, &newSection) == -1) {
-        dprintf(2, "Error occured during getting %s\n", strerror(errno));
-        return (1);
-    }
-    if (writeToFile(header) == -1) {
-        dprintf(1, "%s\n", strerror(errno));
-        return (1);
-    }
+    if (addSectionHeader(&header, &newSection) == -1)
+      return (1);
+    if (addSectionFile(&header) == -1)
+      return (1);
+    if (writeToFile(header) == -1)
+      return (1);
     munmap(header.header, header.size);
     dprintf(2, "Done\n");
     return (0);
