@@ -1,6 +1,7 @@
 [bits 64]
 
 section .text
+  nop
   push rax
   push rdi
   push rsi

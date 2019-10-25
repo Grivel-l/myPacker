@@ -1,30 +1,5 @@
 #include "packer.h"
 
-static void findLibcStart(t_header *header) {
-    size_t      i;
-    size_t      index;
-    Elf64_Sym   *symbol;
-    Elf64_Shdr  *section;
-    char        *strtable;
-
-    index = 0;
-    section = ((void *)header->header) + header->header->e_shoff + header->header->e_shstrndx * sizeof(Elf64_Shdr);
-    strtable = ((void *)header->header) + section->sh_offset;
-    section = ((void *)header->header) + header->header->e_shoff;
-    while (index < header->header->e_shnum) {
-      if (section->sh_type == SHT_SYMTAB || section->sh_type == SHT_DYNSYM) {
-        i = 0;
-        while (i < section->sh_size) {
-          symbol = ((void *)header->header) + section->sh_offset + sizeof(Elf64_Sym) * (i / sizeof(Elf64_Sym));
-          dprintf(1, "Symbol: %s, Value: %i\n", strtable + symbol->st_name, symbol->st_size);
-          i += sizeof(Elf64_Sym);
-        }
-      }
-      index += 1;
-      section += 1;
-    }
-}
-
 static int         getHeader(int fd, const char *path, t_header *header) {
     size_t      opened;
     struct stat stats;
@@ -55,23 +30,6 @@ static int  checkFileType(unsigned char mnum[EI_NIDENT]) {
     return (-1);
 }
 
-/* static void *getSegmentHeader(Elf64_Ehdr *header, Elf64_Word type) { */
-/*     Elf64_Half  i; */
-/*     Elf64_Phdr  *last; */
-/*     Elf64_Phdr  *segHeader; */
-
-/*     last = NULL; */
-/*     segHeader = ((void *)header) + header->e_phoff; */
-/*     i = 0; */
-/*     while (i < header->e_phnum) { */
-/*         if (type == (segHeader + i)->p_type) { */
-/*             last = segHeader + i; */
-/*         } */
-/*         i += 1; */
-/*     } */
-/*     return (last); */
-/* } */
-
 int writeToFile(t_header header) {
     int     fd;
 
@@ -82,21 +40,6 @@ int writeToFile(t_header header) {
     close(fd);
     return (0);
 }
-
-/* static Elf64_Shdr   createEP(t_header header) { */
-/*     Elf64_Shdr  ep; */
-
-/*     ep.sh_type = SHT_PROGBITS; */
-/*     ep.sh_flags = SHF_EXECINSTR | SHF_ALLOC; */
-/*     /1* ep.sh_addr *1/ */
-/*     /1* ep.sh_offset *1/ */
-/*     /1* ep.sh_size *1/ */
-/*     ep.sh_link = 0; */
-/*     ep.sh_info = 0; */
-/*     ep.sh_addralign = 0; */
-/*     ep.sh_entsize = 0; */
-/*     return (ep); */
-/* } */
 
 void  updateEP(t_header *header) {
   Elf64_Shdr  *section;
