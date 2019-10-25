@@ -19,12 +19,7 @@ typedef struct  s_header {
 int             appendShellcode(t_header *header);
 
 void            append(void *bin, void *toAppend, size_t size, size_t *offset);
-void            updateOffsets(t_header *header, size_t offset, size_t toAdd, size_t isSection);
-void            updateOffsets2(t_header *header, size_t offset, size_t toAdd, size_t isSection);
 
 int             noteToLoad(t_header *header);
-Elf64_Phdr      *getSegment(t_header *header, Elf64_Word type);
-Elf64_Phdr      *getLastSegment(t_header *header, Elf64_Word type);
-Elf64_Phdr      *getFlaggedSegment(t_header *header, Elf64_Word type, Elf64_Word flag);
 
 #endif

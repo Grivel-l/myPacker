@@ -69,6 +69,5 @@ int main(int argc, char **argv) {
     if (writeToFile(header) == -1)
       return (1);
     munmap(header.header, header.size);
-    dprintf(2, "Done\n");
     return (0);
 }
