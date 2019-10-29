@@ -25,5 +25,6 @@ section .text
   jmp msg + jumpSize ; Jump to the intruction which will make the jump back to the oep
 
 section .data
+  datastart
   msg db "HelloWorld", 10
-  jumpSize equ $ - msg
+  jumpSize equ $ - datastart

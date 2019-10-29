@@ -25,7 +25,7 @@ static int  getShellcode(t_header *shellcode, size_t oep, size_t ep) {
   int             fd;
   struct stat     stats;
 
-  if (system("nasm -o loader srcs/loader.s") == -1)
+  if (system("nasm -w-orphan-labels -o loader srcs/loader.s") == -1)
     return (-1);
   if (stat("loader", &stats) == -1)
     return (-1);
