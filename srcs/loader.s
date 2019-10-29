@@ -8,12 +8,12 @@ section .text
   push rbp
   mov rbp, rsp
   call put
-  msg:
-    db "HelloWorld", 10
   put:
+    mov rsi, [rsp]
+    sub rsi, $
+    add rsi, msg + 4
     mov rax, 1
     mov rdi, 1
-    mov rsi, [rsp]
     mov rdx, 11
     syscall
   mov rsp, rbp
@@ -22,3 +22,8 @@ section .text
   pop rsi
   pop rdi
   pop rax
+  jmp msg + jumpSize ; Jump to the intruction which will make the jump back to the oep
+
+section .data
+  msg db "HelloWorld", 10
+  jumpSize equ $ - msg
