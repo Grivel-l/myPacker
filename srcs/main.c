@@ -63,8 +63,10 @@ int main(int argc, char **argv) {
     }
     if (appendShellcode(&header) == -1)
       return (1);
-    if (noteToLoad(&header) == -1)
-      return (1);
+    if (noteToLoad(&header) == -1) {
+        dprintf(2, "Couldn't find PT_NOTE program header\n");
+        return (1);
+    }
     if (writeToFile(header) == -1)
       return (1);
     munmap(header.header, header.size);

@@ -1,12 +1,19 @@
 #include "packer.h"
 
 int       noteToLoad(t_header *header) {
+    Elf64_Half  i;
     Elf64_Phdr  *phdr;
 
     phdr = ((void *)header->header) + header->header->e_phoff;
-    // TODO Loop over phdr nbr
-    while (phdr->p_type != PT_NOTE)
-      phdr = ((void *)phdr) + sizeof(Elf64_Phdr);
+    i = 0;
+    while (i < header->header->e_phnum) {
+      if (phdr->p_type == PT_NOTE)
+        break ;
+      i += 1;
+      phdr += 1;
+    }
+    if (i == header->header->e_phnum)
+      return (-1);
     phdr->p_type = PT_LOAD;
     phdr->p_flags = PF_R | PF_X;
     // TODO replace 0xc000000
