@@ -16,11 +16,10 @@ int       noteToLoad(t_header *header) {
       return (-1);
     phdr->p_type = PT_LOAD;
     phdr->p_flags = PF_R | PF_X;
-    // TODO replace 0xc000000
-    phdr->p_offset = header->header->e_entry - 0xc000000;
+    phdr->p_offset = header->header->e_entry - V_ADDR;
     phdr->p_vaddr = header->header->e_entry;
-    phdr->p_paddr = header->header->e_entry - 0xc000000;
-    phdr->p_filesz = header->header->e_entry - 0xc000000;
-    phdr->p_memsz = header->header->e_entry - 0xc000000;
+    phdr->p_paddr = header->header->e_entry - V_ADDR;
+    phdr->p_filesz = header->header->e_entry - V_ADDR;
+    phdr->p_memsz = header->header->e_entry - V_ADDR;
     return (0);
 }

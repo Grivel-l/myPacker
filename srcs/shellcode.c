@@ -38,7 +38,7 @@ static int  getShellcode(t_header *shellcode, size_t oep, size_t ep) {
     return (-1);
   }
   close(fd);
-  return (patchShellcode(shellcode, oep, 0xc000000 + ep));
+  return (patchShellcode(shellcode, oep, V_ADDR + ep));
 }
 
 int  appendShellcode(t_header *header) {
@@ -59,7 +59,7 @@ int  appendShellcode(t_header *header) {
   header->header = (Elf64_Ehdr *)bin;
   header->size += shellcode.size;
   munmap(shellcode.header, shellcode.size);
-  header->header->e_entry = 0xc000000 + offset2;
+  header->header->e_entry = V_ADDR + offset2;
   return (0);
 }
 

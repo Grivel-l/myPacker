@@ -16,6 +16,9 @@ typedef struct  s_header {
     Elf64_Ehdr  *header;
 }               t_header;
 
+// TODO Replace this value
+#define V_ADDR 0xc000000
+
 int             appendShellcode(t_header *header);
 
 void            append(void *bin, void *toAppend, size_t size, size_t *offset);
