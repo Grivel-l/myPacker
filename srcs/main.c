@@ -44,7 +44,6 @@ int writeToFile(t_header header) {
 int main(int argc, char **argv) {
     int         fd;
     t_header    header;
-    Elf64_Shdr  newSection;
 
     if (argc != 2) {
         dprintf(2, "Usage: myPacker arg\n");

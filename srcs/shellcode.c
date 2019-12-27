@@ -45,7 +45,6 @@ int  appendShellcode(t_header *header) {
   unsigned char *bin;
   size_t        offset;
   size_t        offset2;
-  Elf64_Shdr    *section;
   t_header      shellcode;
 
   offset2 = header->size;
