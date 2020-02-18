@@ -25,4 +25,6 @@ void            append(void *bin, void *toAppend, size_t size, size_t *offset);
 
 int             noteToLoad(t_header *header);
 
+int             encryptText(t_header *header);
+
 #endif

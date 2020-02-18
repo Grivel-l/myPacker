@@ -61,6 +61,8 @@ int main(int argc, char **argv) {
         dprintf(2, "File is not an elf file\n");
         return (1);
     }
+    if (encryptText(&header) == -1)
+      return (1);
     if (appendShellcode(&header) == -1)
       return (1);
     if (noteToLoad(&header) == -1) {
