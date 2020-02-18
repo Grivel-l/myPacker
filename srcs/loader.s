@@ -7,15 +7,14 @@ section .text
   push rdx
   push rbp
   mov rbp, rsp
-  call put
-  put:
-    mov rsi, [rsp]
-    sub rsi, $
-    add rsi, msg + 4
-    mov rax, 1
-    mov rdi, 1
-    mov rdx, 11
-    syscall
+  call init
+  sub rax, $
+  mov rsi, rax
+  add rsi, msg
+  mov rax, 1
+  mov rdi, 1
+  mov rdx, 11
+  syscall
   mov rsp, rbp
   pop rbp
   pop rdx
@@ -23,6 +22,9 @@ section .text
   pop rdi
   pop rax
   jmp msg + jumpSize ; Jump to the intruction which will make the jump back to the oep
+  init:
+    mov rax, [rsp]
+    ret
 
 section .data
   datastart
