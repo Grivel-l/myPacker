@@ -1,27 +1,27 @@
 #include "packer.h"
 
-static int  patchShellcode(t_header *shellcode, size_t oep, size_t ep) {
+static int  patchShellcode(t_header *shellcode, t_header *header, size_t ep) {
   char    ins[5];
-  char    *header;
+  char    *content;
   size_t  address;
 
-  address = -(ep - oep + shellcode->size + 5);
+  address = -((ep + shellcode->size) - header->header->e_entry + sizeof(ins));
   ins[0] = 0xe9;
   ins[1] = (address >> 0) & 0xff;
   ins[2] = (address >> 8) & 0xff;
   ins[3] = (address >> 16) & 0xff;
   ins[4] = (address >> 24) & 0xff;
-  if ((header = mmap(NULL, shellcode->size + 5, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+  if ((content = mmap(NULL, shellcode->size + sizeof(ins), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
     return (-1);
-  memcpy(header, shellcode->header, shellcode->size);
-  memcpy(header + shellcode->size, ins, 5);
+  memcpy(content, shellcode->header, shellcode->size);
+  memcpy(content + shellcode->size, ins, sizeof(ins));
   munmap(shellcode->header, shellcode->size);
-  shellcode->size += 5;
-  shellcode->header = (Elf64_Ehdr *)header;
+  shellcode->size += sizeof(ins);
+  shellcode->header = (Elf64_Ehdr *)content;
   return (0);
 }
 
-static int  getShellcode(t_header *shellcode, size_t oep, size_t ep) {
+static int  getShellcode(t_header *shellcode, t_header *header, size_t ep) {
   int             fd;
   struct stat     stats;
 
@@ -38,7 +38,7 @@ static int  getShellcode(t_header *shellcode, size_t oep, size_t ep) {
     return (-1);
   }
   close(fd);
-  return (patchShellcode(shellcode, oep, V_ADDR + ep));
+  return (patchShellcode(shellcode, header, V_ADDR + ep));
 }
 
 int  appendShellcode(t_header *header) {
@@ -48,7 +48,7 @@ int  appendShellcode(t_header *header) {
   t_header      shellcode;
 
   offset2 = header->size;
-  if (getShellcode(&shellcode, header->header->e_entry, offset2) == -1)
+  if (getShellcode(&shellcode, header, offset2) == -1)
     return (-1);
   if ((bin = mmap(NULL, header->size + shellcode.size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
     return (-1);
