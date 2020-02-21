@@ -28,7 +28,6 @@ int   encryptText(t_header *header) {
   i = 0;
   while (i < text->sh_size) {
     tmp = ((void *)header->header) + text->sh_offset + i;
-    (void)tmp;
     *tmp ^= 0xa5;
     i += 1;
   }
