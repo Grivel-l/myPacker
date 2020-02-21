@@ -36,13 +36,21 @@ section .text
     add rdi, dataend
     add rdi, rcx
     add rdi, 5
-    ; TODO Remove this
-    sub rdi, 0x100
+    call alignValue
+    mov rcx, rdi
+    sub rcx, rax
+    mov rdi, rax
     mov rax, 10
     mov rsi, r12
     add rsi, dataend + 12 ; Code section size
     mov rsi, [rsi]
+    add rsi, rcx
     syscall
+    ret
+  alignValue:
+    ; TODO Replace 4095 by getpagesize() - 1
+    mov rax, rdi
+    and rax, ~4095
     ret
   decrypt:
     mov rax, r12

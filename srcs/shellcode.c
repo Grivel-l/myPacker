@@ -6,7 +6,6 @@ static int  patchShellcode(t_header *shellcode, t_header *header, size_t ep) {
   char        *content;
   Elf64_Xword textSize;
 
-  dprintf(1, "Shellcode size: %zu\n", shellcode->size);
   address = -(ep - header->header->e_entry + shellcode->size + 5);
   ins[0] = 0xe9;
   ins[1] = (address >> 0) & 0xff;
