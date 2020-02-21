@@ -1,26 +1,34 @@
 #include "packer.h"
 
 static int  patchShellcode(t_header *shellcode, t_header *header, size_t ep) {
-  int         address;
-  char        ins[12];
+  size_t      address;
+  char        ins[20];
   char        *content;
   Elf64_Xword textSize;
 
-  address = -((ep + shellcode->size) - header->header->e_entry + 5);
+  dprintf(1, "Shellcode size: %zu\n", shellcode->size);
+  address = -(ep - header->header->e_entry + shellcode->size + 5);
   ins[0] = 0xe9;
   ins[1] = (address >> 0) & 0xff;
   ins[2] = (address >> 8) & 0xff;
   ins[3] = (address >> 16) & 0xff;
   ins[4] = (address >> 24) & 0xff;
-  ins[5] = 0x0;
-  ins[6] = 0x0;
-  ins[7] = 0x0;
+  ins[5] = (address >> 32) & 0xff;
+  ins[6] = (address >> 40) & 0xff;
+  ins[7] = (address >> 48) & 0xff;
+  ins[8] = (address >> 56) & 0xff;
+  ins[9] = 0x0;
+  ins[10] = 0x0;
+  ins[11] = 0x0;
   textSize = getTextSize(header->header);
-  // TODO Should write this on 8 bytes
-  ins[8] = (textSize >> 0) & 0xff;
-  ins[9] = (textSize >> 8) & 0xff;
-  ins[10] = (textSize >> 16) & 0xff;
-  ins[11] = (textSize >> 24) & 0xff;
+  ins[12] = (textSize >> 0) & 0xff;
+  ins[13] = (textSize >> 8) & 0xff;
+  ins[14] = (textSize >> 16) & 0xff;
+  ins[15] = (textSize >> 24) & 0xff;
+  ins[16] = (textSize >> 32) & 0xff;
+  ins[17] = (textSize >> 40) & 0xff;
+  ins[18] = (textSize >> 48) & 0xff;
+  ins[19] = (textSize >> 56) & 0xff;
   if ((content = mmap(NULL, shellcode->size + sizeof(ins), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
     return (-1);
   memcpy(content, shellcode->header, shellcode->size);
