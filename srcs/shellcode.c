@@ -1,9 +1,9 @@
 #include "packer.h"
 
 static int  patchShellcode(t_header *shellcode, t_header *header, size_t ep) {
+  int         address;
   char        ins[12];
   char        *content;
-  size_t      address;
   Elf64_Xword textSize;
 
   address = -((ep + shellcode->size) - header->header->e_entry + 5);
