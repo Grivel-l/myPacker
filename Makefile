@@ -1,7 +1,7 @@
 NAME = myPacker
 
 SRCS_DIR = ./srcs/
-SRCS_FILES = helper.c main.c segments.c shellcode.c encrypt.c
+SRCS_FILES = helper.c main.c segments.c shellcode.c encrypt.c sections.c
 SRCS = $(addprefix $(SRCS_DIR),$(SRCS_FILES))
 OBJS = $(subst .c,.o,$(SRCS_FILES))
 

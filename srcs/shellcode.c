@@ -1,16 +1,26 @@
 #include "packer.h"
 
 static int  patchShellcode(t_header *shellcode, t_header *header, size_t ep) {
-  char    ins[5];
-  char    *content;
-  size_t  address;
+  char        ins[12];
+  char        *content;
+  size_t      address;
+  Elf64_Xword textSize;
 
-  address = -((ep + shellcode->size) - header->header->e_entry + sizeof(ins));
+  address = -((ep + shellcode->size) - header->header->e_entry + 5);
   ins[0] = 0xe9;
   ins[1] = (address >> 0) & 0xff;
   ins[2] = (address >> 8) & 0xff;
   ins[3] = (address >> 16) & 0xff;
   ins[4] = (address >> 24) & 0xff;
+  ins[5] = 0x0;
+  ins[6] = 0x0;
+  ins[7] = 0x0;
+  textSize = getTextSize(header->header);
+  // TODO Should write this on 8 bytes
+  ins[8] = (textSize >> 0) & 0xff;
+  ins[9] = (textSize >> 8) & 0xff;
+  ins[10] = (textSize >> 16) & 0xff;
+  ins[11] = (textSize >> 24) & 0xff;
   if ((content = mmap(NULL, shellcode->size + sizeof(ins), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
     return (-1);
   memcpy(content, shellcode->header, shellcode->size);

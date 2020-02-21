@@ -27,4 +27,6 @@ int             noteToLoad(t_header *header);
 
 int             encryptText(t_header *header);
 
+Elf64_Xword     getTextSize(Elf64_Ehdr *header);
+
 #endif
