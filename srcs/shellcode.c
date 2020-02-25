@@ -2,38 +2,44 @@
 
 static int  patchShellcode(t_header *shellcode, t_header *header, size_t ep) {
   size_t      address;
-  char        ins[20];
+  char        params[24];
   char        *content;
   Elf64_Xword textSize;
+  int         pagesize;
 
+  pagesize = getpagesize();
   address = -(ep - header->header->e_entry + shellcode->size + 5);
-  ins[0] = 0xe9;
-  ins[1] = (address >> 0) & 0xff;
-  ins[2] = (address >> 8) & 0xff;
-  ins[3] = (address >> 16) & 0xff;
-  ins[4] = (address >> 24) & 0xff;
-  ins[5] = (address >> 32) & 0xff;
-  ins[6] = (address >> 40) & 0xff;
-  ins[7] = (address >> 48) & 0xff;
-  ins[8] = (address >> 56) & 0xff;
-  ins[9] = 0x0;
-  ins[10] = 0x0;
-  ins[11] = 0x0;
+  params[0] = 0xe9;
+  params[1] = (address >> 0) & 0xff;
+  params[2] = (address >> 8) & 0xff;
+  params[3] = (address >> 16) & 0xff;
+  params[4] = (address >> 24) & 0xff;
+  params[5] = (address >> 32) & 0xff;
+  params[6] = (address >> 40) & 0xff;
+  params[7] = (address >> 48) & 0xff;
+  params[8] = (address >> 56) & 0xff;
+  params[9] = 0x0;
+  params[10] = 0x0;
+  params[11] = 0x0;
   textSize = getTextSize(header->header);
-  ins[12] = (textSize >> 0) & 0xff;
-  ins[13] = (textSize >> 8) & 0xff;
-  ins[14] = (textSize >> 16) & 0xff;
-  ins[15] = (textSize >> 24) & 0xff;
-  ins[16] = (textSize >> 32) & 0xff;
-  ins[17] = (textSize >> 40) & 0xff;
-  ins[18] = (textSize >> 48) & 0xff;
-  ins[19] = (textSize >> 56) & 0xff;
-  if ((content = mmap(NULL, shellcode->size + sizeof(ins), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
+  params[12] = (textSize >> 0) & 0xff;
+  params[13] = (textSize >> 8) & 0xff;
+  params[14] = (textSize >> 16) & 0xff;
+  params[15] = (textSize >> 24) & 0xff;
+  params[16] = (textSize >> 32) & 0xff;
+  params[17] = (textSize >> 40) & 0xff;
+  params[18] = (textSize >> 48) & 0xff;
+  params[19] = (textSize >> 56) & 0xff;
+  params[20] = (pagesize >> 0) & 0xff;
+  params[21] = (pagesize >> 8) & 0xff;
+  params[22] = (pagesize >> 16) & 0xff;
+  params[23] = (pagesize >> 24) & 0xff;
+  if ((content = mmap(NULL, shellcode->size + sizeof(params), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
     return (-1);
   memcpy(content, shellcode->header, shellcode->size);
-  memcpy(content + shellcode->size, ins, sizeof(ins));
+  memcpy(content + shellcode->size, params, sizeof(params));
   munmap(shellcode->header, shellcode->size);
-  shellcode->size += sizeof(ins);
+  shellcode->size += sizeof(params);
   shellcode->header = (Elf64_Ehdr *)content;
   return (0);
 }

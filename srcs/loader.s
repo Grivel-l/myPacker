@@ -48,9 +48,13 @@ section .text
     syscall
     ret
   alignValue:
-    ; TODO Replace 4095 by getpagesize() - 1
+    mov rcx, r12
+    add rcx, dataend + 20
+    mov rcx, [rcx]
+    sub rcx, 1
     mov rax, rdi
-    and rax, ~4095
+    not rcx
+    and rax, rcx
     ret
   decrypt:
     mov rax, r12
