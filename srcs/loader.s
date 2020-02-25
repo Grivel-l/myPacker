@@ -14,7 +14,7 @@ section .text
   mov rdi, 1
   mov rsi, r12
   add rsi, msg
-  mov rdx, 11
+  mov rdx, msgEnd
   syscall
   mov rdx, 0x7  ; PROT_READ | PROT_WRITE | PROT_EXEC
   call mprotect
@@ -82,4 +82,5 @@ section .text
 
 section .data
   msg db "HelloWorld", 10
+  msgEnd
   dataend
