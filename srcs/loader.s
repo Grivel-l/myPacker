@@ -49,7 +49,7 @@ section .text
     ret
   alignValue:
     mov rcx, r12
-    add rcx, dataend + 20
+    add rcx, dataend + 20 ; Page size
     mov rcx, [rcx]
     sub rcx, 1
     mov rax, rdi
