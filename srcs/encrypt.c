@@ -1,6 +1,6 @@
 #include "packer.h"
 
-Elf64_Shdr  *getTextSection(t_header *header) {
+static Elf64_Shdr  *getTextSection(t_header *header) {
   size_t      i;
   Elf64_Shdr  *section;
   char        *stringTable;
