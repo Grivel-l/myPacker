@@ -2,10 +2,10 @@
 
 static int  patchShellcode(t_header *shellcode, t_header *header, size_t ep) {
   size_t      address;
-  char        params[24];
+  char        params[32];
   char        *content;
-  Elf64_Xword textSize;
   int         pagesize;
+  Elf64_Shdr  *text;
 
   pagesize = getpagesize();
   address = -(ep - header->header->e_entry + shellcode->size + 5);
@@ -21,19 +21,28 @@ static int  patchShellcode(t_header *shellcode, t_header *header, size_t ep) {
   params[9] = 0x0;
   params[10] = 0x0;
   params[11] = 0x0;
-  textSize = getTextSize(header->header);
-  params[12] = (textSize >> 0) & 0xff;
-  params[13] = (textSize >> 8) & 0xff;
-  params[14] = (textSize >> 16) & 0xff;
-  params[15] = (textSize >> 24) & 0xff;
-  params[16] = (textSize >> 32) & 0xff;
-  params[17] = (textSize >> 40) & 0xff;
-  params[18] = (textSize >> 48) & 0xff;
-  params[19] = (textSize >> 56) & 0xff;
+  text = getTextSection(header->header);
+  params[12] = (text->sh_size >> 0) & 0xff;
+  params[13] = (text->sh_size >> 8) & 0xff;
+  params[14] = (text->sh_size >> 16) & 0xff;
+  params[15] = (text->sh_size >> 24) & 0xff;
+  params[16] = (text->sh_size >> 32) & 0xff;
+  params[17] = (text->sh_size >> 40) & 0xff;
+  params[18] = (text->sh_size >> 48) & 0xff;
+  params[19] = (text->sh_size >> 56) & 0xff;
   params[20] = (pagesize >> 0) & 0xff;
   params[21] = (pagesize >> 8) & 0xff;
   params[22] = (pagesize >> 16) & 0xff;
   params[23] = (pagesize >> 24) & 0xff;
+  address = ep - text->sh_addr;
+  params[24] = (address >> 0) & 0xff;
+  params[25] = (address >> 8) & 0xff;
+  params[26] = (address >> 16) & 0xff;
+  params[27] = (address >> 24) & 0xff;
+  params[28] = (address >> 32) & 0xff;
+  params[29] = (address >> 40) & 0xff;
+  params[30] = (address >> 48) & 0xff;
+  params[31] = (address >> 56) & 0xff;
   if ((content = mmap(NULL, shellcode->size + sizeof(params), PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0)) == MAP_FAILED)
     return (-1);
   memcpy(content, shellcode->header, shellcode->size);
