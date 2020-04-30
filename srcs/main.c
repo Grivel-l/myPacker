@@ -1,22 +1,13 @@
 #include "packer.h"
 
 static int         getHeader(int fd, const char *path, t_header *header) {
-    size_t      opened;
     struct stat stats;
 
     if (stat(path, &stats) == -1)
         return (-1);
     header->size = stats.st_size;
-    opened = 0;
-    if (fd == -1) {
-        if ((fd = open(path, O_RDONLY)) == -1)
-            return (-1);
-        opened = 1;
-    }
     if ((header->header = mmap(NULL, stats.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
         return (-1);
-    if (opened)
-        close(fd);
     return (0);
 }
 
@@ -30,7 +21,7 @@ static int  checkFileType(unsigned char mnum[EI_NIDENT]) {
     return (-1);
 }
 
-int writeToFile(t_header header) {
+static int writeToFile(t_header header) {
     int     fd;
 
     if ((fd = open("./packed", O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU | S_IRGRP | S_IXGRP | S_IXOTH | S_IROTH)) == -1)
